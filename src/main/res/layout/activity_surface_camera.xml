@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:andriod="http://schemas.android.com/apk/res-auto"
+
+    android:orientation="vertical"
+    android:weightSum="10"
+    tools:context=".SurfaceCamera">
+
+
+
+
+    <FrameLayout
+        android:id="@+id/camera_view"
+        android:layout_width="522dp"
+        android:layout_height="283dp"
+        android:layout_gravity="center" >
+
+        <TextView
+            android:id="@+id/camwait"
+            android:layout_width="225dp"
+            android:layout_height="wrap_content"
+            android:background="#FAF8F8"
+            android:text="Please wait..."
+            android:textColor="#9A0B00"
+            android:textSize="36sp"
+            android:translationZ="90dp"
+            android:visibility="invisible" />
+    </FrameLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="70dp">
+
+
+        <Button
+            android:id="@+id/btnCamera"
+            android:layout_width="220dp"
+
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:background="@android:color/holo_green_dark"
+            android:text="Clock In / Reloj en"
+            android:textColor="@android:color/white"
+            tools:visibility="visible" />
+
+
+        <!-- empty space that will fill "subtotal" and "price", using layout_weight -->
+        <View
+            android:layout_width="1dp"
+            android:layout_weight="1"
+            android:layout_height="1dp"/>
+
+        <!-- price -->
+
+
+        <Button
+            android:id="@+id/btnCameraout"
+            android:layout_width="220dp"
+
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:background="@android:color/holo_red_dark"
+            android:text="Clock out / Reloj de salida"
+            android:textColor="@android:color/white"
+            tools:visibility="visible" />
+
+</LinearLayout>
+
+
+    <Button
+        android:id="@+id/btnClockincancel"
+        android:layout_width="522dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center"
+        android:layout_weight="1"
+
+        android:background="#ECEAEA"
+
+        android:text="Cancel / Cancelar"
+        android:textColor="@android:color/black"
+        tools:visibility="visible" />
+
+
+
+
+</LinearLayout>

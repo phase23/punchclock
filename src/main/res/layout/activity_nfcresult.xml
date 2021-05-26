@@ -1,0 +1,114 @@
+<TableLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:shrinkColumns="*"  android:stretchColumns="*" android:background="#ffffff"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".Nfcresult">
+
+
+    <TableRow
+        android:id="@+id/tableRow1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="20dp">
+
+
+        <Button
+            android:id="@+id/finishnfc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="48dp"
+            android:layout_gravity="top|left"
+            android:textSize="25dp"
+            android:layout_marginTop="85dp"
+            android:text="Finish"></Button>
+
+
+
+
+        <TextView
+            android:id="@+id/outnfc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="20dp"
+
+            android:layout_gravity="top|left"
+            android:text="TextView">
+        </TextView>
+
+    </TableRow>
+
+
+    <TableRow
+        android:id="@+id/tableRow2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="left">
+
+        <TextView
+            android:id="@+id/tasklist"
+            android:layout_width="match_parent"
+            android:layout_height="66dp"
+            android:layout_alignParentTop="false"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="false"
+            android:layout_gravity="top|left"
+            android:paddingLeft="25dp"
+            android:paddingTop="15dp"
+            android:text="task"
+            android:textSize="20dp"
+            tools:layout_editor_absoluteX="112dp"
+            tools:layout_editor_absoluteY="112dp" />
+
+
+    </TableRow>
+
+
+    <TableRow
+        android:id="@+id/tableRow3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/clocresult"
+            android:layout_width="241dp"
+            android:layout_height="46dp"
+            android:layout_alignParentTop="false"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="false"
+            android:layout_gravity="center"
+            android:paddingLeft="25dp"
+            android:paddingTop="15dp"
+            android:text="thisresult"
+            android:textSize="25dp"
+            android:textStyle="bold"
+            tools:layout_editor_absoluteX="112dp"
+            tools:layout_editor_absoluteY="112dp" />
+
+
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
+
+        <FrameLayout
+            android:id="@+id/keyfobcamera_view"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_gravity="center"
+            android:visibility="invisible">
+
+        </FrameLayout>
+
+    </TableRow>
+
+
+
+
+
+</TableLayout>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:andriod="http://schemas.android.com/apk/res-auto"
+
+    android:orientation="vertical"
+    android:weightSum="10"
+    tools:context=".fobOptions">
+
+
+
+
+        <TextView
+            android:id="@+id/statusresult"
+            android:layout_width="513dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center"
+            android:paddingLeft="25dp"
+            android:paddingTop="15dp"
+            android:text="Please Choose an option to clock in or out"
+            android:textSize="25dp"
+            android:layout_marginTop="50dp"
+            android:layout_span="2"
+            android:textStyle="bold" />
+
+
+    <LinearLayout
+        android:id="@+id/tableRow1a"
+        android:layout_width="match_parent"
+        android:layout_height="160dp"
+        android:layout_marginTop="70dp"
+        android:paddingLeft="20dp">
+
+
+        <Button
+            android:id="@+id/btnfobin"
+            android:layout_width="220dp"
+
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="10dp"
+            android:layout_weight="1"
+            android:background="@android:color/holo_green_dark"
+            android:text="Clock In / Reloj en"
+            android:textColor="@android:color/white"
+            tools:visibility="visible" />
+
+
+        <!-- empty space that will fill "subtotal" and "price", using layout_weight -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- price -->
+
+
+        <Button
+            android:id="@+id/btnfobout"
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginRight="20dp"
+            android:layout_marginBottom="10dp"
+            android:layout_weight="1"
+            android:background="@android:color/holo_red_dark"
+            android:text="Clock out / Reloj de salida"
+            android:textColor="@android:color/white"
+            tools:visibility="visible" />
+
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnClockincancel"
+        android:layout_width="522dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center"
+        android:layout_weight="1"
+
+        android:background="#ECEAEA"
+
+        android:text="Cancel / Cancelar"
+        android:textColor="@android:color/black"
+        tools:visibility="visible" />
+
+
+</LinearLayout>

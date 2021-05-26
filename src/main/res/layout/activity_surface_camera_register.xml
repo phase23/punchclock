@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:andriod="http://schemas.android.com/apk/res-auto"
+
+    android:orientation="vertical"
+    android:weightSum="10"
+    tools:context=".SurfaceCameraRegister">
+
+    <FrameLayout
+        android:id="@+id/camera_viewreg"
+        android:layout_width="522dp"
+        android:layout_height="283dp"
+        android:layout_gravity="center">
+
+
+        <TextView
+            android:id="@+id/camwait"
+            android:layout_width="225dp"
+            android:layout_height="wrap_content"
+            android:background="#FAF8F8"
+            android:text="Please wait..."
+            android:textColor="#9A0B00"
+            android:textSize="36sp"
+            android:translationZ="90dp"
+            android:visibility="invisible" />
+
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/btnCameraReg"
+        android:layout_width="522dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:layout_gravity="center"
+        android:layout_weight="1"
+        android:background="@android:color/holo_red_dark"
+        android:text="Register"
+
+        android:textColor="@android:color/white"
+        tools:visibility="visible" />
+
+
+    <Button
+        android:id="@+id/btnCameraRegcancel"
+        android:layout_width="522dp"
+        android:layout_height="50dp"
+        android:layout_weight="1"
+        android:background="#ECEAEA"
+        android:layout_gravity="center"
+        android:text="Cancel"
+        android:textColor="@android:color/black"
+        tools:visibility="visible" />
+
+
+
+</LinearLayout>
