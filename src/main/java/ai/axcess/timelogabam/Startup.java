@@ -8,6 +8,7 @@ import okhttp3.RequestBody;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -38,6 +39,9 @@ public class Startup extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_startup);
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
         setup = (Button)findViewById(R.id.login_now);
         pin = (EditText)findViewById(R.id.passwrd);
         email = (EditText)findViewById(R.id.inemail);

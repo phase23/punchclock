@@ -47,7 +47,7 @@
         android:ems="10"
         android:hint="Last name"
         android:inputType="textPersonName"
-        app:layout_constraintBottom_toTopOf="@+id/innemail"
+        app:layout_constraintBottom_toTopOf="@+id/thisemail"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0" />
@@ -62,13 +62,13 @@
         android:hint="Business"
         android:inputType="textPersonName"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/innemail"
+        app:layout_constraintEnd_toStartOf="@+id/thisemail"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <EditText
-        android:id="@+id/inemail"
+        android:id="@+id/thisemail"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="112dp"

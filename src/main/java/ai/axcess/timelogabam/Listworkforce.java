@@ -9,6 +9,7 @@ import okhttp3.RequestBody;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Build;
@@ -41,6 +42,7 @@ public class Listworkforce extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_listworkforce);
         textView = (TextView) findViewById(R.id.msgscanned);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);

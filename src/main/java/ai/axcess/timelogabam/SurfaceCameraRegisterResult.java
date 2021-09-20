@@ -3,6 +3,7 @@ package ai.axcess.timelogabam;
 
 
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
@@ -46,7 +47,7 @@ public class SurfaceCameraRegisterResult extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_surface_camera_register_result);
-
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         textView = (TextView)findViewById(R.id.textViewres);
         retakebtn = (Button)findViewById(R.id.retakeres);
         finishbtn = (Button)findViewById(R.id.finishres);

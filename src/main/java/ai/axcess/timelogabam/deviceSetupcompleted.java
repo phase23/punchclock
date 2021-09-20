@@ -3,6 +3,7 @@ package ai.axcess.timelogabam;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -16,7 +17,7 @@ public class deviceSetupcompleted extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_setupcompleted);
-
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         continueon = (Button)findViewById(R.id.continuethis);
 
         continueon.setOnClickListener(new View.OnClickListener() {

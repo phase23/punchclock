@@ -8,6 +8,7 @@ import okhttp3.RequestBody;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -40,14 +41,16 @@ public class Accountsetup extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_accountsetup);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         btncancel = (Button)findViewById(R.id.cancelcc);
         btncreate = (Button)findViewById(R.id.presscreate);
 
         fname = (EditText)findViewById(R.id.fname);
+        inemail = (EditText)findViewById(R.id.inemail);
         lname = (EditText)findViewById(R.id.lname);
         bname = (EditText)findViewById(R.id.bname);
-        inemail = (EditText)findViewById(R.id.innemail);
+        inemail = (EditText)findViewById(R.id.thisemail);
         inpasswrd = (EditText)findViewById(R.id.inpasswrd);
         cinpasswrd = (EditText)findViewById(R.id.cinpasswd);
 
@@ -103,6 +106,13 @@ public class Accountsetup extends AppCompatActivity {
                 if(addUser.equals("emailinuse")){
                     Toast.makeText(getApplicationContext(), "This email address is already in use", Toast.LENGTH_LONG).show();
                     return;
+                } else {
+
+                    Intent deviceup = new Intent(Accountsetup.this, deviceSetupcompleted.class);
+                    startActivity(deviceup);
+
+
+
                 }
 
 

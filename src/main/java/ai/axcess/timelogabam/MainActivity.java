@@ -1,5 +1,6 @@
 package ai.axcess.timelogabam;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -11,6 +12,7 @@ import okhttp3.RequestBody;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -44,13 +46,19 @@ public class MainActivity extends AppCompatActivity {
     String returndevice;
     View thisview;
     ImageView adminlevel;
-
+    private static final int MY_CAMERA_REQUEST_CODE = 100;
+    private static final int MY_STORAGE_REQUEST_CODE = 101;
+    int ALL_PERMISSIONS = 102;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         final ProgressBar pb = (ProgressBar)findViewById(R.id.progress_loader);
+        final String[] permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
+       // ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
+
         justwait = (TextView) findViewById(R.id.wait);
         thisview = (View) findViewById(R.id.barup);
         adminlevel = (ImageView) findViewById(R.id.gear);
@@ -203,22 +211,93 @@ public class MainActivity extends AppCompatActivity {
             });
 
 
-            if (checkPermission()) {
-                //main logic or main code
-
-                // . write your main code to execute, It will execute if the permission is already given.
-
-            } else {
-                requestPermission();
+            if(!hasPermissions(this, permissions)){
+                ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
             }
+
+
+                        /*
+                          if (checkPermission()) {
+                            //main logic or main code
+                            // . write your main code to execute, It will execute if the permission is already given.
+
+                            } else {
+                            requestPermission();
+                                }
+                         */
+
 
 
         }//end else
 
 
+        /*
+        if (Build.VERSION.SDK_INT >= 23) {
+
+
+            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_STORAGE_REQUEST_CODE);
+            }
+
+
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, MY_CAMERA_REQUEST_CODE);
+            }
+
+        }
+
+
+         */
+
+    }
+
+    public static boolean hasPermissions(Context context, String... permissions) {
+        if (context != null && permissions != null) {
+            for (String permission : permissions) {
+                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == MY_CAMERA_REQUEST_CODE) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "camera permission granted", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "camera permission denied", Toast.LENGTH_LONG).show();
+                //Intent nopermission = new Intent(Register.this, Nopermission.class);
+                //startActivity(nopermission);
+
+            }
+        }
+
+
+        if (requestCode == MY_STORAGE_REQUEST_CODE) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "storage permission granted", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "storage permission denied", Toast.LENGTH_LONG).show();
+                //Intent nopermission = new Intent(Register.this, Nopermission.class);
+                //startActivity(nopermission);
+
+            }
+        }
+
+
+
+
+
 
 
     }
+
 
 
     public void FullScreencall() {
@@ -247,6 +326,14 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.CAMERA},
                 PERMISSION_REQUEST_CODE);
+
+        /*
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                MY_STORAGE_REQUEST_CODE);
+*/
+
+
     }
 
 
