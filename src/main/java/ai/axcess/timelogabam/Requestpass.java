@@ -13,18 +13,24 @@ import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.MediaPlayer;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareClassic;
 import android.nfc.tech.NfcA;
+import android.os.Bundle;
+import android.util.Log;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -34,8 +40,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 
-public class Requestnfc extends AppCompatActivity {
+import static android.content.ContentValues.TAG;
 
+public class Requestpass extends AppCompatActivity {
 
 
     private NfcAdapter nfcAdapter;
@@ -57,29 +64,18 @@ public class Requestnfc extends AppCompatActivity {
     String responseBody;
     String putall;
     public Handler handler;
+    TextView prompt;
+
     MediaPlayer playerNFC;
-    String camaction;
-    String timeowner;
-    String userid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_requestnfc);
 
-        timeowner = getIntent().getExtras().getString("timeowner");
-        userid = getIntent().getExtras().getString("userid");
-        camaction = getIntent().getExtras().getString("camaction");
 
-        handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            public void run() {
-                // TODO: Your application init goes here.
-                Intent mInHome = new Intent(Requestnfc.this, MainActivity.class);
-                Requestnfc.this.startActivity(mInHome);
-                Requestnfc.this.finish();
-            }
-        }, 15000);
+        prompt = (TextView)findViewById(R.id.promt);
+
 
 
 
@@ -88,9 +84,8 @@ public class Requestnfc extends AppCompatActivity {
 
 
 
-
         nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-/*
+
         if (nfcAdapter == null) {
             promt.setText("Device can not support NFC��");
             finish();
@@ -102,7 +97,7 @@ public class Requestnfc extends AppCompatActivity {
             return;
         }
 
-*/
+
         pendingIntent = PendingIntent.getActivity(this, 0, new Intent(this,
                 getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
         IntentFilter ndef = new IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED);
@@ -128,8 +123,8 @@ public class Requestnfc extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Log.d("ckil", "button click");
-                handler.removeCallbacksAndMessages(null);
-                Intent intent = new Intent(Requestnfc.this, Adminpanel.class);
+
+                Intent intent = new Intent(Requestpass.this, Adminpanel.class);
                 startActivity(intent);
 
             }
@@ -142,9 +137,6 @@ public class Requestnfc extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         // �õ��Ƿ��⵽ACTION_TECH_DISCOVERED����
-
-
-
         nfcAdapter.enableForegroundDispatch(this, pendingIntent, mFilters,
                 mTechLists);
         if (isnews) {
@@ -167,13 +159,9 @@ public class Requestnfc extends AppCompatActivity {
         // �õ��Ƿ��⵽ACTION_TECH_DISCOVERED����
         // nfcAdapter.enableForegroundDispatch(this, pendingIntent, mFilters,
         // mTechLists);
-
-
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())) {
             // �����intent
             // processIntent1(intent);
-
-
             processIntent2(intent);
             intents = intent;
         }
@@ -181,8 +169,6 @@ public class Requestnfc extends AppCompatActivity {
     }
 
     public void processIntent2(Intent intent) {
-
-
 
         read(intent);// ������
 
@@ -206,15 +192,13 @@ public class Requestnfc extends AppCompatActivity {
     }
 
 
-
-
     public String capturetag( String uid ) {
 
         String deviceId = Settings.Secure.getString(this.getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
         //String url = "https://aaxcess.com/getrfid.php?rfid="+uid + "&getdevice="+deviceId;;
-        String url = "https://punchclock.ai/captureTag.php?keyfob="+uid + "&getdevice="+deviceId + "&choice="+camaction + "&capturetype=options";
+        String url = "https://punchclock.ai/registerapp_raw.php?keyfob="+uid + "&getdevice="+deviceId;;
 
 
 
@@ -258,10 +242,6 @@ public class Requestnfc extends AppCompatActivity {
 
     public void read(Intent intent) {
 
-
-
-        handler.removeCallbacksAndMessages(null);
-
         Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         byte[]  uuid = tag.getId();
 
@@ -291,113 +271,54 @@ public class Requestnfc extends AppCompatActivity {
 
         Log.d("UID adj str/",  struid);
 
-
-        String responsethis = capturetag(struid);
+        String showres = capturetag(struid);
 
         FullScreencall();
 
 
-        responsethis = responsethis.trim();
-        String[] separated = responsethis.split("~");
-        String rekstat = separated[0];
+        Log.i("action responseserver", showres);
 
-        Log.d("UIDfirstback/",  rekstat);
+        String[] separated = showres.split(Pattern.quote("|"));
+
+        String rekstat = separated[0];
+        System.out.println("out number " + rekstat);
         int myNum = 0;
 
         try {
             myNum = Integer.parseInt(rekstat);
-        } catch(NumberFormatException nfe) {
+        } catch (NumberFormatException nfe) {
             System.out.println("Could not parse " + nfe);
         }
 
-        if(myNum == 1) {
 
+        if (myNum == 2) {
 
+            //nopass.setVisibility(View.VISIBLE);
+            //wait.setVisibility(View.INVISIBLE);
 
-            String fname = separated[1];
-            String lname = separated[2];
-            String jobtype = separated[3];
-            String datein = separated[4];
-            String timein = separated[5];
-            String clockstat = separated[6];
-            String onthejob = separated[7];
-            String tasklist = separated[8];
-            tasklist = tasklist.trim();
-
-
-            String taskis;
-            if(tasklist.equals("***")){
-                //if(tasklist == '***'){
-                taskis = "";
-            }else {
-                taskis = "<h3>Today's task: " + tasklist +"</h3>";
-
-            }
-
-
-            putall = "" + fname + "<br>" + lname
-                    + "<br>" + jobtype
-                    + "<br>" + datein
-                    + "<br>" + timein
-                    + "<br><b>" + clockstat +"</b>"
-                    + "<br>" + onthejob + "<br>";
-
-            Intent intent3 = new Intent(Requestnfc.this, Nfcresult.class);
-            intent3.putExtra("outbag",putall);
-            intent3.putExtra("uid",struid);
-            intent3.putExtra("clockstat",clockstat);
-            intent3.putExtra("taskis",taskis);
-
-            startActivity(intent3);
-
-
-        }else{
-            String errorrez = separated[1];
-             putall = "" + errorrez + "\n";
-
-
-            AlertDialog.Builder builder = new AlertDialog.Builder(Requestnfc.this);
-            builder.setTitle("Your Message");
-
-            //builder.setMessage(putall);
-            builder.setMessage(Html.fromHtml(putall));
-
-
-            builder.setPositiveButton("Finish", new DialogInterface.OnClickListener() {
-
-                public void onClick(DialogInterface dialog, int which) {
-
-
-
-                    dialog.dismiss();
-                    Intent intent = new Intent(Requestnfc.this, MainActivity.class);
-                    startActivity(intent);
-
-
-
-
-
-                }
-            });
-
-
-
-            AlertDialog alert = builder.create();
-            alert.show();
-
+            Intent intent2 = new Intent(Requestpass.this, Adminpanel.class);
+            startActivity(intent2);
         }
 
 
+        if (myNum == 1) {
+           // handler.removeCallbacksAndMessages(null);
+
+            String timeowner = separated[1];
+            Log.i("action wtoken", timeowner);
+
+            Intent intent2 = new Intent(Requestpass.this, Admindashboard.class);
+            intent2.putExtra("timeowner",timeowner);
+            startActivity(intent2);
 
 
+        }
 
 
 
 
 
     }
-
-
 
 
     public void FullScreencall() {
@@ -411,41 +332,6 @@ public class Requestnfc extends AppCompatActivity {
             decorView.setSystemUiVisibility(uiOptions);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

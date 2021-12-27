@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ public class Adminpanel extends AppCompatActivity {
     EditText email;
     String responseLocation;
     String cunq;
+    ImageView keypass;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,9 +38,30 @@ public class Adminpanel extends AppCompatActivity {
         ccancel = (Button)findViewById(R.id.login_cancel);
         llogin = (Button)findViewById(R.id.login_now);
 
+
+        keypass = (ImageView) findViewById(R.id.keyfobpass);
+
         pin = (EditText)findViewById(R.id.innpasswrd);
         email = (EditText)findViewById(R.id.innemail);
         FullScreencall();
+
+
+
+
+
+        keypass.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Intent nfc = new Intent(Adminpanel.this, Requestpass.class);
+                startActivity(nfc);
+
+
+
+            }
+        });
+
+
 
         ccancel.setOnClickListener(new View.OnClickListener() {
             @Override
