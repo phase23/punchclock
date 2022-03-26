@@ -91,7 +91,7 @@
             android:layout_width="246dp"
             android:layout_height="64dp"
             android:paddingLeft="25dp"
-            android:textSize="25dp"
+            android:textSize="18dp"
             tools:layout_editor_absoluteX="101dp"
             tools:layout_editor_absoluteY="617dp" />
 
@@ -103,6 +103,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="right">
+
+
+        <Button
+            android:id="@+id/callout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_centerHorizontal="true"
+            android:layout_gravity="bottom|center"
+            android:width="160dp"
+            android:background="#3A8748"
+            android:gravity="center"
+            android:text="Are you On Call?"
+            android:textColor="#FFFFFF"
+            tools:layout_editor_absoluteX="532dp"
+            tools:layout_editor_absoluteY="680dp" />
+
 
         <Button
             android:id="@+id/finish"
@@ -117,6 +136,8 @@
             android:text="Finish / terminar"
             tools:layout_editor_absoluteX="532dp"
             tools:layout_editor_absoluteY="680dp" />
+
+
 
     </TableRow>
 

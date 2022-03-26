@@ -2,11 +2,14 @@ package ai.axcess.timelogabam;
 
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 //import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -14,16 +17,24 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.text.Html;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import ai.axcess.timelogabam.R;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -37,11 +48,15 @@ public class SurfaceCameraResult extends AppCompatActivity {
 
     Button button;
     Button button2;
+    Button callout;
     Intent intent = getIntent();
     String cunqrez;
     String cunq;
+    public String responsethis;
+    String postaction;
     public Handler handler;
     private long mLastClickTime = 0;
+    String wunq;
     //String responsethis = intent.getStringExtra("passthis");
 
     //Bundle extras = getIntent().getExtras();
@@ -58,8 +73,10 @@ public class SurfaceCameraResult extends AppCompatActivity {
         task = (TextView)findViewById(R.id.taskid);
         button = (Button)findViewById(R.id.retake);
         button2 = (Button)findViewById(R.id.finish);
+        callout = (Button)findViewById(R.id.callout);
         imageView = (ImageView)findViewById(R.id.imageView);
 
+        callout.setVisibility(View.INVISIBLE);
 
         handler = new Handler();
         handler.postDelayed(new Runnable() {
@@ -72,7 +89,7 @@ public class SurfaceCameraResult extends AppCompatActivity {
         }, 60000);
 
 
-        String responsethis = getIntent().getExtras().getString("passthis");
+         responsethis = getIntent().getExtras().getString("passthis");
         final String cunq = getIntent().getExtras().getString("cunq");
 
         Log.i("pass:respBody:surresult",responsethis);
@@ -100,6 +117,10 @@ public class SurfaceCameraResult extends AppCompatActivity {
             String clockstat = separated[8];
             String onthejob = separated[9];
             String tasklist = separated[13];
+             wunq = separated[14];
+            String iscallout = separated[15];
+            String calloutjob = separated[16];
+
             tasklist = tasklist.trim();
             String putall = "" + fname + "\n" +  lname + "\n" +  jobtype + "\n" + datein
                     + "\n" + timein
@@ -113,6 +134,13 @@ public class SurfaceCameraResult extends AppCompatActivity {
 
             if(clockstat.equals("Clocked In")){
                 statresult.setTextColor(Color.parseColor("#04743e"));
+                iscallout = iscallout.trim();
+
+                if(iscallout.equals("yescallout")){
+                    callout.setVisibility(View.VISIBLE);
+                }
+
+
             }else {
 
                 statresult.setTextColor(Color.parseColor("#CD0811"));
@@ -192,6 +220,106 @@ public class SurfaceCameraResult extends AppCompatActivity {
         });
 
 
+        callout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                AlertDialog.Builder dialog = new AlertDialog.Builder(SurfaceCameraResult.this);
+                dialog.setCancelable(false);
+                dialog.setTitle("Confirm Callout");
+                dialog.setMessage("Please confirm this is a call out" );
+                dialog.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+
+
+                        try {
+
+
+                            Log.i("[print]", "https://punchclock.ai/sendcallout.php?call=" + wunq );
+                            sendCallout("https://punchclock.ai/sendcallout.php?call=" + wunq);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+
+
+                        Intent intent = new Intent(SurfaceCameraResult.this, Calloutresult.class);
+                        intent.putExtra("passthis", responsethis);
+                        intent.putExtra("cunq", cunq);
+                        startActivity(intent);
+
+
+                        // finishAffinity();
+                        //System.exit(0);
+
+                        //Action for "Delete".
+                    }
+                })
+                        .setNegativeButton("No ", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                //Action for "Cancel".
+                            }
+                        });
+
+                final AlertDialog alert = dialog.create();
+                alert.show();
+
+
+
+
+
+
+
+
+
+            }
+
+        });
+
+
+
+
+    }
+
+
+    void sendCallout(String url) throws IOException {
+        Log.i("[print]","url " + url);
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        OkHttpClient client = new OkHttpClient();
+        client.newCall(request)
+                .enqueue(new Callback() {
+                    @Override
+                    public void onFailure(final Call call, IOException e) {
+                        // Error
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // For the example, you can show an error dialog or a toast
+                                // on the main UI thread
+                                Log.i("[print]","error" + e);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onResponse(Call call, final Response response) throws IOException {
+                        postaction = response.body().string();
+                        Log.i("assyn url",postaction);
+                        // Do something with the response
+
+
+                        Log.i("[print]",postaction);
+                        postaction = postaction.trim();
+
+
+                    }
+                });
     }
 
 

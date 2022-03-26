@@ -35,12 +35,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
+            android:name=".Calloutresult"
+            android:exported="false" />
+        <activity
             android:name=".Requestpass"
             android:exported="false" />
 
         <service
             android:name=".Myservice"
-            android:enabled="true"></service>
+            android:enabled="true" />
 
         <receiver
             android:name=".BootUpReceiver"
