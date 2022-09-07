@@ -129,7 +129,7 @@ public class Requestnfc extends AppCompatActivity {
             public void onClick(View view) {
                 Log.d("ckil", "button click");
                 handler.removeCallbacksAndMessages(null);
-                Intent intent = new Intent(Requestnfc.this, Adminpanel.class);
+                Intent intent = new Intent(Requestnfc.this, MainActivity.class);
                 startActivity(intent);
 
             }

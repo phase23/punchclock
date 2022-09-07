@@ -109,6 +109,7 @@ public class Accountsetup extends AppCompatActivity {
                 } else {
 
                     Intent deviceup = new Intent(Accountsetup.this, deviceSetupcompleted.class);
+                    deviceup.putExtra("email",thisinemail);
                     startActivity(deviceup);
 
 

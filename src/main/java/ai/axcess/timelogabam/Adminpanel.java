@@ -86,7 +86,7 @@ public class Adminpanel extends AppCompatActivity {
 
 
                 if (thisemail.matches("")) {
-                    Toast.makeText(getApplicationContext(), "You did not enter a email", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "You did not enter a username", Toast.LENGTH_SHORT).show();
                     return;
                 }
 

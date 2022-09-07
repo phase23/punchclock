@@ -108,6 +108,7 @@ public class Startup extends AppCompatActivity {
                 if(addDevice.equals("newdevice")){
 
                     Intent deviceup = new Intent(Startup.this, deviceSetupcompleted.class);
+                    deviceup.putExtra("email"," ");
                     startActivity(deviceup);
 
                 }

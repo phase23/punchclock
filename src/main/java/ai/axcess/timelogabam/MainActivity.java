@@ -36,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 200;
     ImageView facelog;
     ImageView nfcread;
+    ImageView fingr;
+    ImageView wrenhr;
+    ImageView pinpad;
     TextView textView;
     TextView locationplace;
     TextView justwait;
@@ -62,6 +65,10 @@ public class MainActivity extends AppCompatActivity {
         justwait = (TextView) findViewById(R.id.wait);
         thisview = (View) findViewById(R.id.barup);
         adminlevel = (ImageView) findViewById(R.id.gear);
+        fingr =  (ImageView) findViewById(R.id.fingrpr);
+        pinpad = (ImageView) findViewById(R.id.dailpad);
+        wrenhr = (ImageView) findViewById(R.id.wrench);
+
 
         boolean connected = false;
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -88,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
             adminlevel.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
+                    justwait.setVisibility(View.VISIBLE);
                     Intent goadmin = new Intent(MainActivity.this, Adminpanel.class);
                     startActivity(goadmin);
 
@@ -97,6 +104,17 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            wrenhr.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    justwait.setVisibility(View.VISIBLE);
+                    Intent goadmin = new Intent(MainActivity.this, aidHelp.class);
+                    startActivity(goadmin);
+
+
+
+                }
+            });
 
 
 
@@ -191,6 +209,41 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             });
+
+
+
+            fingr.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    Toast.makeText(getApplicationContext(),"This option is not available",Toast.LENGTH_LONG).show();
+
+                }
+
+            });
+
+
+            pinpad.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    checkinternet();
+                    String cunq = getdeviceowner(deviceId);
+                    justwait.setVisibility(View.VISIBLE);
+                    Log.i("log owner", cunq);
+
+                    Intent intent = new Intent(MainActivity.this, Pinpad.class);
+                    intent.putExtra("cunq", cunq);
+                    startActivity(intent);
+
+
+                }
+
+            });
+
+
+
+
 
 
             nfcread.setOnClickListener(new View.OnClickListener() {
@@ -369,12 +422,12 @@ public class MainActivity extends AppCompatActivity {
         if (null != activeNetwork) {
             if(activeNetwork.getType() == ConnectivityManager.TYPE_WIFI){
                 //we have WIFI
-                textView.setVisibility(View.VISIBLE);
-                textView.setText("please wait...");
+                //textView.setVisibility(View.VISIBLE);
+                //textView.setText("please wait...");
             }
             if(activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE){
-                textView.setVisibility(View.VISIBLE);
-                textView.setText("please wait...");
+                //textView.setVisibility(View.VISIBLE);
+                //textView.setText("please wait...");
             }
         } else{
             //we have no connection :(

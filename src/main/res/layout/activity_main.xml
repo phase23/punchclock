@@ -60,15 +60,15 @@
 
     <ImageView
         android:id="@+id/facial"
-        android:layout_width="233dp"
-        android:layout_height="227dp"
+        android:layout_width="158dp"
+        android:layout_height="148dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
         android:layout_centerVertical="true"
-        android:layout_marginStart="64dp"
-        android:layout_marginLeft="64dp"
-        android:layout_marginTop="111dp"
+        android:layout_marginStart="94dp"
+        android:layout_marginLeft="94dp"
+        android:layout_marginTop="68dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.162"
@@ -89,17 +89,26 @@
         android:layout_marginBottom="0dp"
         android:background="#000000" />
 
+
+    <View
+        android:id="@+id/barhr"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="231dp"
+        android:background="#000000" />
+
     <ImageView
         android:id="@+id/nfcfob"
-        android:layout_width="232dp"
-        android:layout_height="286dp"
+        android:layout_width="150dp"
+        android:layout_height="176dp"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true"
         android:layout_centerVertical="true"
-        android:layout_marginEnd="60dp"
-        android:layout_marginRight="60dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginEnd="123dp"
+        android:layout_marginRight="123dp"
+        android:layout_marginBottom="182dp"
         app:srcCompat="@drawable/ic_keyfob" />
 
     <TextView
@@ -109,9 +118,9 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="115dp"
-        android:layout_marginLeft="115dp"
-        android:layout_marginBottom="23dp"
+        android:layout_marginStart="321dp"
+        android:layout_marginLeft="321dp"
+        android:layout_marginBottom="165dp"
         android:text="No Internet Connection"
         android:textColor="#F44336"
         android:textColorLink="#F44336"
@@ -129,20 +138,72 @@
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true"
         android:layout_centerVertical="true"
-        android:layout_marginStart="289dp"
-        android:layout_marginLeft="289dp"
-        android:layout_marginTop="185dp"
-        android:layout_marginEnd="243dp"
-        android:layout_marginRight="243dp"
-        android:layout_marginBottom="170dp"
+        android:layout_marginStart="296dp"
+        android:layout_marginLeft="296dp"
+        android:layout_marginTop="205dp"
+        android:layout_marginEnd="236dp"
+        android:layout_marginRight="236dp"
+        android:layout_marginBottom="150dp"
         android:text="Please Wait"
         android:textColor="#AF0000"
-        android:visibility="invisible"
-        android:textSize="34sp" />
+        android:textSize="34sp"
+        android:visibility="invisible" />
 
     <ImageView
         android:id="@+id/gear"
-        android:layout_width="30dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="3dp"
+        android:layout_marginLeft="3dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="687dp"
+        android:layout_marginRight="687dp"
+        android:layout_marginBottom="374dp"
+        app:srcCompat="@drawable/cogwheel" />
+
+
+    <ImageView
+        android:id="@+id/wrench"
+        android:layout_width="29dp"
+        android:layout_height="30dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="685dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="17dp"
+        android:layout_marginBottom="374dp"
+        app:srcCompat="@drawable/wrench" />
+
+    <ImageView
+        android:id="@+id/fingrpr"
+        android:layout_width="130dp"
+        android:layout_height="114dp"
+
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="113dp"
+        android:layout_marginLeft="113dp"
+        android:layout_marginTop="259dp"
+        android:layout_marginEnd="488dp"
+        android:layout_marginBottom="38dp"
+        app:srcCompat="@drawable/fingerprints"
+        app:tint="@color/colorLightGrey" />
+
+    <ImageView
+        android:id="@+id/dailpad"
+        android:layout_width="97dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
@@ -150,14 +211,14 @@
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="2dp"
-        android:layout_marginLeft="2dp"
-        android:layout_marginTop="3dp"
-        android:layout_marginEnd="699dp"
-        android:layout_marginRight="699dp"
-        android:layout_marginBottom="383dp"
-        android:background="#FCFFFFFF"
-        app:srcCompat="@drawable/ic_settings_gear_svgrepo_com" />
+        android:layout_marginStart="498dp"
+        android:layout_marginLeft="498dp"
+        android:layout_marginTop="258dp"
+        android:layout_marginEnd="136dp"
+        android:layout_marginRight="136dp"
+        android:layout_marginBottom="36dp"
+        app:srcCompat="@drawable/keypad" />
+
 
 
 </RelativeLayout>
