@@ -104,10 +104,12 @@
         android:id="@+id/nfcfob"
         android:layout_width="150dp"
         android:layout_height="176dp"
+        android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true"
         android:layout_centerVertical="true"
+        android:layout_marginStart="458dp"
         android:layout_marginEnd="123dp"
         android:layout_marginRight="123dp"
         android:layout_marginBottom="182dp"
@@ -186,22 +188,22 @@
         app:srcCompat="@drawable/wrench" />
 
     <ImageView
-        android:id="@+id/fingrpr"
-        android:layout_width="130dp"
-        android:layout_height="114dp"
+        android:id="@+id/ontravel"
+        android:layout_width="178dp"
+        android:layout_height="wrap_content"
 
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="113dp"
-        android:layout_marginLeft="113dp"
-        android:layout_marginTop="259dp"
-        android:layout_marginEnd="488dp"
-        android:layout_marginBottom="38dp"
-        app:srcCompat="@drawable/fingerprints"
-        app:tint="@color/colorLightGrey" />
+        android:layout_marginStart="87dp"
+        android:layout_marginLeft="87dp"
+        android:layout_marginTop="244dp"
+        android:layout_marginEnd="466dp"
+        android:layout_marginBottom="17dp"
+        app:srcCompat="@drawable/traveltr"
+        app:tint="#FF685D" />
 
     <ImageView
         android:id="@+id/dailpad"

@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 200;
     ImageView facelog;
     ImageView nfcread;
-    ImageView fingr;
+    ImageView away;
     ImageView wrenhr;
     ImageView pinpad;
     TextView textView;
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         justwait = (TextView) findViewById(R.id.wait);
         thisview = (View) findViewById(R.id.barup);
         adminlevel = (ImageView) findViewById(R.id.gear);
-        fingr =  (ImageView) findViewById(R.id.fingrpr);
+        away =  (ImageView) findViewById(R.id.ontravel);
         pinpad = (ImageView) findViewById(R.id.dailpad);
         wrenhr = (ImageView) findViewById(R.id.wrench);
 
@@ -212,11 +212,25 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-            fingr.setOnClickListener(new View.OnClickListener() {
+            away.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
 
-                    Toast.makeText(getApplicationContext(),"This option is not available",Toast.LENGTH_LONG).show();
+                    //thisview.setVisibility(View.INVISIBLE);
+                    justwait.setVisibility(View.VISIBLE);
+                    String cunq = getdeviceowner(deviceId);
+
+
+                    Log.i("log owner", cunq);
+
+                    Intent intent = new Intent(MainActivity.this, SurfaceCameraTravel.class);
+                    intent.putExtra("cunq", cunq);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivityForResult(intent, 0);
+                    overridePendingTransition(0,0); //0 for no animation
+
+                    startActivity(intent);
+
 
                 }
 
