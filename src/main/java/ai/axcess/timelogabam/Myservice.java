@@ -6,6 +6,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -13,17 +14,22 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.StrictMode;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
@@ -48,10 +54,19 @@ public class Myservice extends Service {
 
     LocationManager locationManager;
     Context mContext;
+    private WifiManager wifiManager;
+    WifiConfiguration currentConfig;
+    WifiManager.LocalOnlyHotspotReservation hotspotReservation;
+
 
 
     @Override
     public void onCreate() {
+
+
+
+        getApplicationContext().registerReceiver(mReceiver, new IntentFilter("android.net.wifi.WIFI_AP_STATE_CHANGED"));
+       // getApplicationContext().registerReceiver(broadcastReceiver, new IntentFilter("stopchecks"));
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
 
@@ -109,10 +124,13 @@ public class Myservice extends Service {
         StrictMode.setThreadPolicy(policy);
 
 
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+
+
+
         if ( ContextCompat.checkSelfPermission( this, android.Manifest.permission.ACCESS_COARSE_LOCATION ) != PackageManager.PERMISSION_GRANTED ) {
 
         }
-
 
 
 
@@ -186,6 +204,73 @@ public class Myservice extends Service {
 
     }
 
+
+
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if ("android.net.wifi.WIFI_AP_STATE_CHANGED".equals(action)) {
+
+                // get Wi-Fi Hotspot state here
+                int state = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, 0);
+
+                if (WifiManager.WIFI_STATE_ENABLED == state % 10) {
+                    WifiConfiguration wifiConfig = new WifiConfiguration();
+                    // Wifi is enabled
+                    //Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DECTECTED! Hotspot NOT available", Toast.LENGTH_LONG).show();
+
+                    int toastDurationInSeconds = 20; // the duration in seconds
+                    final Toast toast = Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DECTECTED!.. Hotspot NOT available", Toast.LENGTH_LONG);
+
+                    int timeInMilliseconds = toastDurationInSeconds * 1000;
+                    CountDownTimer toastCountDown;
+                    toastCountDown = new CountDownTimer(timeInMilliseconds, 1000 /*Tick duration*/) {
+                        public void onTick(long millisUntilFinished) {
+                            toast.show();
+                        }
+
+                        public void onFinish() {
+                            toast.cancel();
+                        }
+                    };
+
+                    toast.show();
+                    toastCountDown.start();
+
+
+
+
+
+
+
+                    setWifiEnabled(wifiConfig, false); // Disable the WiFi hotspot
+                    sendhotspot();
+
+                }
+
+
+            }
+        }
+    };
+
+    public boolean setWifiEnabled(WifiConfiguration wifiConfig, boolean enabled) {
+
+        try {
+            if (enabled) { //disables wifi hotspot if it's already enabled
+                wifiManager.setWifiEnabled(false);
+                Log.i("Hotspot Disabed", "Connected turn it off....");
+            }
+
+            Method method = wifiManager.getClass()
+                    .getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+            return (Boolean) method.invoke(wifiManager, wifiConfig, enabled);
+        } catch (Exception e) {
+            Log.e(this.getClass().toString(), "", e);
+            return false;
+        }
+    }
 
     public void  batteryLevel(Context context, String Device)
     {
@@ -273,6 +358,54 @@ public class Myservice extends Service {
 
 
 
+
+
+
+    }
+
+
+    public  void sendhotspot(){
+
+
+        String getdeviceid = Settings.Secure.getString(this.getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        Long tsLong = System.currentTimeMillis()/1000;
+
+        String url = "https://punchclock.ai/api/hotspot.php?timestamp="+tsLong + "&deviceid=" + getdeviceid;
+
+        Log.i("action url",url);
+        OkHttpClient client = new OkHttpClient();
+
+
+        // String contentType = fileSource.toURL().openConnection().getContentType();
+
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("device",getdeviceid )
+                .build();
+        Request request = new Request.Builder()
+
+                .url(url)//your webservice url
+                .post(requestBody)
+                .build();
+        try {
+            //String responseBody;
+            okhttp3.Response response = client.newCall(request).execute();
+            // Response response = client.newCall(request).execute();
+            if (response.isSuccessful()){
+                Log.i("SUCC",""+response.message());
+
+            }
+            String resp = response.message();
+            responseBody =  response.body().string();
+            Log.i("respBody",responseBody);
+
+
+
+            Log.i("MSG",resp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 
 

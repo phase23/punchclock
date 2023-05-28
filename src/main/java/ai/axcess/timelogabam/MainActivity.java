@@ -1,9 +1,11 @@
 package ai.axcess.timelogabam;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -12,10 +14,14 @@ import okhttp3.RequestBody;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,6 +35,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
@@ -52,23 +59,36 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_CAMERA_REQUEST_CODE = 100;
     private static final int MY_STORAGE_REQUEST_CODE = 101;
     int ALL_PERMISSIONS = 102;
+    private WifiManager wifiManager;
+    WifiConfiguration currentConfig;
+    WifiManager.LocalOnlyHotspotReservation hotspotReservation;
 
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        final ProgressBar pb = (ProgressBar)findViewById(R.id.progress_loader);
+        final ProgressBar pb = (ProgressBar) findViewById(R.id.progress_loader);
         final String[] permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
-       // ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
+        // ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
 
         justwait = (TextView) findViewById(R.id.wait);
         thisview = (View) findViewById(R.id.barup);
         adminlevel = (ImageView) findViewById(R.id.gear);
-        away =  (ImageView) findViewById(R.id.ontravel);
+        away = (ImageView) findViewById(R.id.ontravel);
         pinpad = (ImageView) findViewById(R.id.dailpad);
         wrenhr = (ImageView) findViewById(R.id.wrench);
 
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiConfiguration wifiConfig = new WifiConfiguration();
+
+
+
+
+        showWritePermissionSettings();
+        setWifiEnabled(wifiConfig, false); // Disable the WiFi hotspot
 
         boolean connected = false;
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -81,13 +101,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-
-        if(!connected) {
-            Toast.makeText(getApplicationContext(),"Check Internet & Restart App",Toast.LENGTH_LONG).show();
+        if (!connected) {
+            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
             Intent nointernet = new Intent(MainActivity.this, Nointernet.class);
             startActivity(nointernet);
 
-        }else {
+        } else {
 
             Intent i = new Intent(this, Myservice.class);
             this.startService(i);
@@ -100,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(goadmin);
 
 
-
                 }
             });
 
@@ -110,7 +128,6 @@ public class MainActivity extends AppCompatActivity {
                     justwait.setVisibility(View.VISIBLE);
                     Intent goadmin = new Intent(MainActivity.this, aidHelp.class);
                     startActivity(goadmin);
-
 
 
                 }
@@ -192,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
 */
 
                     //pb.setVisibility(visible);
-                    thisview.setVisibility(View.INVISIBLE);
+                    //thisview.setVisibility(View.INVISIBLE);
                     justwait.setVisibility(View.VISIBLE);
                     String cunq = getdeviceowner(deviceId);
 
@@ -202,14 +219,13 @@ public class MainActivity extends AppCompatActivity {
                     intent.putExtra("cunq", cunq);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivityForResult(intent, 0);
-                    overridePendingTransition(0,0); //0 for no animation
+                    overridePendingTransition(0, 0); //0 for no animation
 
                     startActivity(intent);
 
                 }
 
             });
-
 
 
             away.setOnClickListener(new View.OnClickListener() {
@@ -227,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
                     intent.putExtra("cunq", cunq);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivityForResult(intent, 0);
-                    overridePendingTransition(0,0); //0 for no animation
+                    overridePendingTransition(0, 0); //0 for no animation
 
                     startActivity(intent);
 
@@ -256,10 +272,6 @@ public class MainActivity extends AppCompatActivity {
             });
 
 
-
-
-
-
             nfcread.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -278,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
             });
 
 
-            if(!hasPermissions(this, permissions)){
+            if (!hasPermissions(this, permissions)) {
                 ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
             }
 
@@ -292,7 +304,6 @@ public class MainActivity extends AppCompatActivity {
                             requestPermission();
                                 }
                          */
-
 
 
         }//end else
@@ -318,6 +329,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+
     public static boolean hasPermissions(Context context, String... permissions) {
         if (context != null && permissions != null) {
             for (String permission : permissions) {
@@ -328,7 +341,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
-
 
 
     @Override
@@ -358,20 +370,61 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+    }
 
 
+    public  void sendhotspot(){
+
+
+        String getdeviceid = Settings.Secure.getString(this.getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        Long tsLong = System.currentTimeMillis()/1000;
+
+        String url = "https://punchclock.ai/api/hotspot.php?timestamp="+tsLong + "&deviceid=" + getdeviceid;
+
+        Log.i("action url",url);
+        OkHttpClient client = new OkHttpClient();
+
+
+        // String contentType = fileSource.toURL().openConnection().getContentType();
+
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("device",getdeviceid )
+                .build();
+        Request request = new Request.Builder()
+
+                .url(url)//your webservice url
+                .post(requestBody)
+                .build();
+        try {
+            //String responseBody;
+            okhttp3.Response response = client.newCall(request).execute();
+            // Response response = client.newCall(request).execute();
+            if (response.isSuccessful()){
+                Log.i("SUCC",""+response.message());
+
+            }
+            String resp = response.message();
+            responseBody =  response.body().string();
+            Log.i("respBody",responseBody);
+
+
+
+            Log.i("MSG",resp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 
 
     }
 
-
-
     public void FullScreencall() {
-        if(Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
+        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
             View v = this.getWindow().getDecorView();
             v.setSystemUiVisibility(View.GONE);
-        } else if(Build.VERSION.SDK_INT >= 19) {
+        } else if (Build.VERSION.SDK_INT >= 19) {
             //for new api versions.
             View decorView = getWindow().getDecorView();
             int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
@@ -404,60 +457,60 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private  void lcheckinternet(){
+    private void lcheckinternet() {
 
-        ConnectivityManager manager =(ConnectivityManager) getApplicationContext()
+        ConnectivityManager manager = (ConnectivityManager) getApplicationContext()
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = manager.getActiveNetworkInfo();
         if (null != activeNetwork) {
-            if(activeNetwork.getType() == ConnectivityManager.TYPE_WIFI){
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
                 //we have WIFI
                 //textView.setVisibility(View.VISIBLE);
                 //textView.setText("please wait...");
             }
-            if(activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE){
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
                 textView.setVisibility(View.VISIBLE);
                 //textView.setText("please wait...");
             }
-        } else{
+        } else {
             //we have no connection :(
-            Toast.makeText(getApplicationContext(),"Check Internet & Restart App",Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
             textView.setVisibility(View.VISIBLE);
             textView.setText("No Internet Connection");
         }
     }
 
 
-    private  void checkinternet(){
+    private void checkinternet() {
 
-        ConnectivityManager manager =(ConnectivityManager) getApplicationContext()
+        ConnectivityManager manager = (ConnectivityManager) getApplicationContext()
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = manager.getActiveNetworkInfo();
         if (null != activeNetwork) {
-            if(activeNetwork.getType() == ConnectivityManager.TYPE_WIFI){
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
                 //we have WIFI
                 //textView.setVisibility(View.VISIBLE);
                 //textView.setText("please wait...");
             }
-            if(activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE){
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
                 //textView.setVisibility(View.VISIBLE);
                 //textView.setText("please wait...");
             }
-        } else{
+        } else {
             //we have no connection :(
-            Toast.makeText(getApplicationContext(),"Check Internet & Restart App",Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
             textView.setVisibility(View.VISIBLE);
             textView.setText("No Internet Connection");
         }
     }
 
 
-    public String getdevicelocation( String deviceid ) {
+    public String getdevicelocation(String deviceid) {
 
-        String url = "https://punchclock.ai/getdevicelocation.php?token="+deviceid;
+        String url = "https://punchclock.ai/getdevicelocation.php?token=" + deviceid;
 
 
-        Log.i("action url",url);
+        Log.i("action url", url);
 
         OkHttpClient client = new OkHttpClient();
 
@@ -466,7 +519,7 @@ public class MainActivity extends AppCompatActivity {
 
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("deviceid",deviceid )
+                .addFormDataPart("deviceid", deviceid)
                 .build();
         Request request = new Request.Builder()
 
@@ -477,17 +530,16 @@ public class MainActivity extends AppCompatActivity {
             //String responseBody;
             okhttp3.Response response = client.newCall(request).execute();
             // Response response = client.newCall(request).execute();
-            if (response.isSuccessful()){
-                Log.i("SUCC",""+response.message());
+            if (response.isSuccessful()) {
+                Log.i("SUCC", "" + response.message());
 
             }
             String resp = response.message();
-            responseLocation =  response.body().string();
-            Log.i("respBody:main",responseLocation);
+            responseLocation = response.body().string();
+            Log.i("respBody:main", responseLocation);
 
 
-
-            Log.i("MSG",resp);
+            Log.i("MSG", resp);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -495,7 +547,6 @@ public class MainActivity extends AppCompatActivity {
         return responseLocation;
 
     }//emd
-
 
 
     public String isregistered() {
@@ -504,12 +555,12 @@ public class MainActivity extends AppCompatActivity {
         String thisdevice = Settings.Secure.getString(this.getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
-        String url = "https://punchclock.ai/devicesetup.php?action=checkdevice&token="+thisdevice;
-        Log.i("action url",url);
+        String url = "https://punchclock.ai/devicesetup.php?action=checkdevice&token=" + thisdevice;
+        Log.i("action url", url);
         OkHttpClient client = new OkHttpClient();
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("deviceid",thisdevice )
+                .addFormDataPart("deviceid", thisdevice)
                 .build();
         Request request = new Request.Builder()
                 .url(url)//your webservice url
@@ -519,13 +570,13 @@ public class MainActivity extends AppCompatActivity {
             //String responseBody;
             okhttp3.Response response = client.newCall(request).execute();
             // Response response = client.newCall(request).execute();
-            if (response.isSuccessful()){
-                Log.i("SUCC",""+response.message());
+            if (response.isSuccessful()) {
+                Log.i("SUCC", "" + response.message());
             }
             String resp = response.message();
-            responseLocation =  response.body().string();
-            Log.i("respBody:main",responseLocation);
-            Log.i("MSG",resp);
+            responseLocation = response.body().string();
+            Log.i("respBody:main", responseLocation);
+            Log.i("MSG", resp);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -534,6 +585,42 @@ public class MainActivity extends AppCompatActivity {
 
     }//emd
 
+
+    private boolean showWritePermissionSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            if (!Settings.System.canWrite(this)) {
+                Log.v("DANG", " " + !Settings.System.canWrite(this));
+                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                intent.setData(Uri.parse("package:" + this.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                this.startActivity(intent);
+                return false;
+            }
+        }
+        return true; //Permission already given
+    }
+
+
+    public boolean setWifiEnabled(WifiConfiguration wifiConfig, boolean enabled) {
+
+        try {
+            if (enabled) { //disables wifi hotspot if it's already enabled
+                wifiManager.setWifiEnabled(false);
+                Log.i("Hotspot Disabed", "Connected turn it off....");
+                Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DECTECTED! Hotspot NOT available", Toast.LENGTH_LONG).show();
+
+                sendhotspot();
+            }
+
+            Method method = wifiManager.getClass()
+                    .getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+            return (Boolean) method.invoke(wifiManager, wifiConfig, enabled);
+        } catch (Exception e) {
+            Log.e(this.getClass().toString(), "", e);
+            return false;
+        }
+    }
 
 
     public String getdeviceowner( String deviceid ) {

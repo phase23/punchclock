@@ -113,6 +113,7 @@ public class Pinpad extends AppCompatActivity {
                 if (pincode.matches("")  ) {
                     Toast.makeText(getApplicationContext(), "Your pin cannot be blank", Toast.LENGTH_SHORT).show();
                     waitpin.setVisibility(View.INVISIBLE);
+                    btnClockincancel.setEnabled(true);
                     return;
                 }
 
@@ -133,11 +134,12 @@ public class Pinpad extends AppCompatActivity {
                 if(myNum == 2){
                     Toast.makeText(getApplicationContext(), "Your pin is not recognised", Toast.LENGTH_SHORT).show();
                     waitpin.setVisibility(View.INVISIBLE);
+                    btnClockincancel.setEnabled(true);
                 }
 
 
                 if(myNum == 1) {
-
+                    handler.removeCallbacksAndMessages(null);
                     String fname = separated[1];
                     String lname = separated[2];
                     String jobtype = separated[3];
@@ -184,6 +186,7 @@ public class Pinpad extends AppCompatActivity {
 
 
                 if(myNum == 99) {
+                    btnClockincancel.setEnabled(true);
                     waitpin.setVisibility(View.INVISIBLE);
                     String report_en = separated[1];
                     String report_es = separated[2];
@@ -260,6 +263,7 @@ public class Pinpad extends AppCompatActivity {
                 if (pincode.matches("")  ) {
                     Toast.makeText(getApplicationContext(), "Your pin cannot be blank", Toast.LENGTH_SHORT).show();
                     waitpin.setVisibility(View.INVISIBLE);
+                    btnClockincancel.setEnabled(true);
                     return;
                 }
 
@@ -280,11 +284,13 @@ public class Pinpad extends AppCompatActivity {
                 if(myNum == 2){
                     waitpin.setVisibility(View.INVISIBLE);
                     Toast.makeText(getApplicationContext(), "Your pin is not recognised", Toast.LENGTH_SHORT).show();
+                    btnClockincancel.setEnabled(true);
                 }
 
 
-                if(myNum == 1) {
 
+                if(myNum == 1) {
+                    handler.removeCallbacksAndMessages(null);
                     String fname = separated[1];
                     String lname = separated[2];
                     String jobtype = separated[3];
@@ -331,6 +337,7 @@ public class Pinpad extends AppCompatActivity {
 
 
                 if(myNum == 99) {
+                    btnClockincancel.setEnabled(true);
                     waitpin.setVisibility(View.INVISIBLE);
                     String report_en = separated[1];
                     String report_es = separated[2];

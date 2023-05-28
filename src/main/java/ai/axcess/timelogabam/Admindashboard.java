@@ -11,6 +11,7 @@ import android.widget.ImageView;
 
 public class Admindashboard extends AppCompatActivity {
     Button llogout;
+    Button adduser;
     ImageView facer;
     ImageView chiper;
     String cunq;
@@ -25,6 +26,7 @@ public class Admindashboard extends AppCompatActivity {
         FullScreencall();
 
         llogout = (Button)findViewById(R.id.logoutbtn);
+        adduser = (Button)findViewById(R.id.adduserbtn);
         facer = (ImageView) findViewById(R.id.rface);
         chiper = (ImageView) findViewById(R.id.rchip);
 
@@ -32,13 +34,29 @@ public class Admindashboard extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                Intent gohome = new Intent(Admindashboard.this, Adminpanel.class);
+                Intent gohome = new Intent(Admindashboard.this, MainActivity.class);
                 startActivity(gohome);
 
 
 
             }
         });
+
+
+        adduser.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Intent intent = new Intent(Admindashboard.this, Adduser.class);
+                intent.putExtra("timeowner",cunq);
+                startActivity(intent);
+
+
+
+            }
+        });
+
+
 
         facer.setOnClickListener(new View.OnClickListener() {
             @Override

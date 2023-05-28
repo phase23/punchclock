@@ -560,7 +560,7 @@ public class SurfaceCamera extends AppCompatActivity {
         cunq = cunq.trim();
 
 
-           String url = "https://punchclock.ai/capture.php?cunq="+cunq + "&getdevice="+deviceId + "&choice=" +camaction + "&capturetype=options";
+           String url = "https://punchclock.ai/capture.php?cunq="+cunq + "&getdevice="+deviceId + "&choice=" +camaction + "&capturetype=options&test=yes";
         //String url = "https://punchclock.ai/capture.php?cunq="+cunq + "&getdevice="+deviceId + "&choice=" +camaction + "&capturetype=bar";
 
         Log.i("PATH url ",url);

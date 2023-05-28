@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="ai.axcess.timelogabam">
 
     <uses-feature android:name="android.hardware.camera" />
@@ -28,6 +29,9 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission
+        android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="true"
@@ -39,6 +43,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
+        <activity
+            android:name=".Adduser"
+            android:exported="false" />
         <activity
             android:name=".SurfaceCameraTravelResult"
             android:exported="false" />
@@ -72,7 +79,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
+        <!--
+        <receiver android:name=".WifiApmReceiver">
+            <intent-filter>
+                <action android:name="android.net.wifi.WIFI_AP_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        -->
         <activity android:name=".Pinpad" />
         <activity android:name=".Requestnfc_register" />
         <activity android:name=".Listworkforce_rfid" />
