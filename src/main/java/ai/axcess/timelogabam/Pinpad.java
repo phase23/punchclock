@@ -403,6 +403,8 @@ public class Pinpad extends AppCompatActivity {
                 startActivity(intent);
                 handler.removeCallbacksAndMessages(null);
 
+                finish(); // Finish the current Activity
+
             }
         });
 

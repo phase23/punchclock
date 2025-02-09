@@ -28,6 +28,7 @@ import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -35,10 +36,14 @@ import java.net.Socket;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 //import static ai.axcess.readdeviceid.MainActivity.isPlugged;
 
 public class Myservice extends Service {
@@ -51,7 +56,8 @@ public class Myservice extends Service {
     public Handler handler;
     String thedevice;
     String responseBody;
-
+    String somebits;
+    String responseLocation;
     LocationManager locationManager;
     Context mContext;
     private WifiManager wifiManager;
@@ -218,6 +224,7 @@ public class Myservice extends Service {
 
                 if (WifiManager.WIFI_STATE_ENABLED == state % 10) {
                     WifiConfiguration wifiConfig = new WifiConfiguration();
+
                     // Wifi is enabled
                     //Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DECTECTED! Hotspot NOT available", Toast.LENGTH_LONG).show();
 
@@ -233,6 +240,7 @@ public class Myservice extends Service {
 
                         public void onFinish() {
                             toast.cancel();
+                            sendhotspot();
                         }
                     };
 
@@ -246,7 +254,7 @@ public class Myservice extends Service {
 
 
                     setWifiEnabled(wifiConfig, false); // Disable the WiFi hotspot
-                    sendhotspot();
+
 
                 }
 
@@ -281,7 +289,7 @@ public class Myservice extends Service {
         //textView.setText(Device + " Battery: " + percent + " %" );
 
         Log.d("percentage", " is :" + percent);
-        boolean online = hostAvailable("www.google.com", 80);
+        boolean online = isOnline() ;
 
         if(online) {
 
@@ -296,10 +304,19 @@ public class Myservice extends Service {
 
             Log.d("percent internet", " Charging :" + chargestautus);
 
-            senddevicestate( percent, chargestautus );
+            //senddevicestate( percent, chargestautus );
 
+            String getdeviceid = Settings.Secure.getString(this.getContentResolver(),
+                    Settings.Secure.ANDROID_ID);
 
+            Long tsLong = System.currentTimeMillis()/1000;
 
+            try {
+                sendoutdevicestate("https://punchclock.ai/devicestate.php?percentage="+percent + "&charge="+ chargestautus + "&deviceid=" + getdeviceid + "&timestamp="+tsLong);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
 
 
@@ -364,7 +381,51 @@ public class Myservice extends Service {
     }
 
 
-    public  void sendhotspot(){
+
+    public String sendhotspot() {
+
+        String thisdevice = Settings.Secure.getString(this.getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        String getdeviceid = Settings.Secure.getString(this.getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        Long tsLong = System.currentTimeMillis()/1000;
+
+        //String url = "https://punchclock.ai/devicesetup.php?action=adduser&token="+thisdevice + "&thisfname=" + thisfname + "&thislname=" +thislname + "&thisbname="+ thisbname + "&thisinemail="+thisinemail + "&thisinpasswrd="+thisinpasswrd;
+        //String url = "https://punchclock.ai/usersetup.php?action=adduser";
+        String url = "https://punchclock.ai/api/hotspot.php?timestamp="+tsLong + "&deviceid=" + getdeviceid;
+
+        Log.i("action url",url);
+        OkHttpClient client = new OkHttpClient();
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+
+                .addFormDataPart("tdeviceid",getdeviceid )
+
+                .build();
+        Request request = new Request.Builder()
+                .url(url)//your webservice url
+                .post(requestBody)
+                .build();
+        try {
+            //String responseBody;
+            okhttp3.Response response = client.newCall(request).execute();
+            // Response response = client.newCall(request).execute();
+            if (response.isSuccessful()){
+                Log.i("SUCC",""+response.message());
+            }
+            String resp = response.message();
+            responseLocation =  response.body().string();
+            Log.i("respBody:main",responseLocation);
+            Log.i("MSG",resp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return responseLocation;
+    }
+
+
+
+    public  void sendhotspots(){
 
 
         String getdeviceid = Settings.Secure.getString(this.getContentResolver(),
@@ -472,6 +533,42 @@ public class Myservice extends Service {
 
 
 
+    void sendoutdevicestate(String url) throws IOException {
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        Log.i("ddevice",url);
+        OkHttpClient client = new OkHttpClient();
+        client.newCall(request)
+                .enqueue(new Callback() {
+                    @Override
+                    public void onFailure(final Call call, IOException e) {
+                        Log.i("ddevice","errot"); // Error
+
+
+                    }
+
+                    @Override
+                    public void onResponse(Call call, final Response response) throws IOException {
+
+
+                        somebits = response.body().string();
+                        Log.i("ddevice",somebits);
+                        createAndWriteToFile(somebits);
+
+
+
+                    }//end if
+
+
+
+
+                });
+
+    }
+
+
+
 
     public String senddevicestate( int percentage, String chargestate ) {
 
@@ -518,7 +615,7 @@ public class Myservice extends Service {
             responseBody =  response.body().string();
             Log.i("respBody",responseBody);
 
-
+            createAndWriteToFile(responseBody);
 
             Log.i("MSG",resp);
         } catch (IOException e) {
@@ -534,7 +631,30 @@ public class Myservice extends Service {
 
 
 
+    public void createAndWriteToFile(String data) {
+        String fileName = "base.txt";
+        // Uncomment the line below to display a toast message with the content
+        // Toast.makeText(getApplicationContext(), "ss: " + data, Toast.LENGTH_LONG).show();
+        System.out.println("ss: " + data); // This is equivalent to println in Kotlin
 
+        FileOutputStream fos = null;
+        try {
+            fos = openFileOutput(fileName, Context.MODE_PRIVATE);
+            fos.write(data.getBytes());
+            // File written successfully
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Error writing file
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
 
     public static boolean isPlugged(Context context) {
@@ -559,6 +679,22 @@ public class Myservice extends Service {
             System.out.println(e);
             return false;
         }
+    }
+
+
+    public boolean isOnline() {
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            Process ipProcess = runtime.exec("/system/bin/ping -c 1 8.8.8.8");
+            int exitValue = ipProcess.waitFor();
+            return (exitValue == 0);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
 

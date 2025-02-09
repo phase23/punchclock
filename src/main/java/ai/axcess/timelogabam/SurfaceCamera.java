@@ -1,5 +1,7 @@
 package ai.axcess.timelogabam;
 
+import static android.content.ContentValues.TAG;
+
 import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -33,6 +35,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import ai.axcess.timelogabam.R;
 
@@ -176,6 +179,7 @@ public class SurfaceCamera extends AppCompatActivity {
                 Intent intent = new Intent(SurfaceCamera.this, MainActivity.class);
                 startActivity(intent);
                 handler.removeCallbacksAndMessages(null);
+                finish(); // Finish the current Activity
 
             }
         });
@@ -309,7 +313,10 @@ public class SurfaceCamera extends AppCompatActivity {
                 mCamera.setPreviewDisplay(holder);
                 mCamera.startPreview();
             } catch (IOException e) {
-                //Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+                Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+                Toast.makeText(getApplicationContext(), "Error setting camera preview:" + e.getMessage(), Toast.LENGTH_LONG).show();
+
+
             }
         }
 

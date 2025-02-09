@@ -44,6 +44,9 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".Errorpunch"
+            android:exported="false" />
+        <activity
             android:name=".Adduser"
             android:exported="false" />
         <activity

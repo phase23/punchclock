@@ -44,6 +44,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Nfcresult extends AppCompatActivity {
 
@@ -132,6 +136,22 @@ public class Nfcresult extends AppCompatActivity {
     }
 
 
+    public void executeUpload(final String filepath) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<Integer> resultFuture = executor.submit(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return uploadFile(filepath);
+            }
+        });
+
+        // Here, you can do something with the resultFuture,
+        // like resultFuture.get() to get the result, but be aware this call is blocking
+
+        executor.shutdown(); // Always remember to shut down the executor
+    }
+
+
     public void dotakepic(){
 
 
@@ -169,8 +189,8 @@ public class Nfcresult extends AppCompatActivity {
 
                 saveBitmapToFile(pictureFile);
                 //uploadMultipart(filepath);
-                uploadFile(filepath);
-
+                //uploadFile(filepath);
+                executeUpload(filepath);
 
 
                 MediaStore.Images.Media.insertImage(getContentResolver(), myBitmap, "PhotoTest", "taken with intent camera");
