@@ -37,6 +37,6 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:3.5.0'
     //implementation 'com.github.wRorsjakz:Android-NumPad:1.0.1'
     implementation 'com.github.alannurabdann:Android-NumPad:1.0.1'
-    implementation 'eu.davidea:flexible-numberpad:1.0.0'
+    //implementation 'eu.davidea:flexible-numberpad:1.0.0'
 
 }

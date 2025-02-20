@@ -5,6 +5,7 @@ import static android.content.ContentValues.TAG;
 import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -373,67 +374,66 @@ public class SurfaceCamera extends AppCompatActivity {
 
 
     Camera.PictureCallback mPicture = new Camera.PictureCallback() {
-
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
-
             File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
 
-
             if (pictureFile == null) {
-                // Log.i("Error creating media file, check storage permissions");
                 Log.i("MSG","Error creating media file, check storage permissions");
                 return;
             }
 
             try {
-
-                //Log.d(TAG, "pic taken: ");
                 Log.i("MSG","pic taken:");
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 fos.write(data);
                 fos.close();
 
-
                 String filepath = pictureFile.getAbsolutePath();
-                Log.d("picpath : to /",  filepath);
+                Log.d("picpath : to /", filepath);
 
                 Bitmap myBitmap = BitmapFactory.decodeFile(filepath);
 
+                // First save and upload the file
                 saveBitmapToFile(pictureFile);
-                //uploadMultipart(filepath);
                 uploadFile(filepath, cunq);
 
+                // REMOVE these lines - don't insert into MediaStore if you want to delete
+                // MediaStore.Images.Media.insertImage(getContentResolver(), myBitmap, "PhotoTest", "taken with intent camera");
+                // MediaScannerConnection.scanFile(SurfaceCamera.this, new String[]{filepath}, null, null);
 
-
-                MediaStore.Images.Media.insertImage(getContentResolver(), myBitmap, "PhotoTest", "taken with intent camera");
-                MediaScannerConnection.scanFile(SurfaceCamera.this, new String[]{filepath}, null, null);
-
-
-                /*
-                File target = new File(filepath);
-                Log.d(" target_path", "" + filepath);
-                if (target.exists() && target.isFile() && target.canWrite()) {
-                    target.delete();
-                    Log.d("target d_file", "" + target.getName());
+                // After upload is complete, delete the file
+                if(pictureFile.exists()) {
+                    boolean deleted = pictureFile.delete();
+                    if(deleted) {
+                        Log.d("DeleteImage", "File deleted successfully");
+                        // Force media scan to update
+                        MediaScannerConnection.scanFile(
+                                SurfaceCamera.this,
+                                new String[]{filepath},
+                                null,
+                                new MediaScannerConnection.OnScanCompletedListener() {
+                                    @Override
+                                    public void onScanCompleted(String path, Uri uri) {
+                                        // Delete from MediaStore if uri exists
+                                        if (uri != null) {
+                                            getContentResolver().delete(uri, null, null);
+                                        }
+                                    }
+                                }
+                        );
+                    } else {
+                        Log.e("DeleteImage", "File deletion failed");
+                    }
                 }
-                */
-
-                deleteImage(pictureFile);
-
 
             } catch (FileNotFoundException e) {
-                // Log.d(TAG, "File not found: " + e.getMessage());
-                // System.out.printlne.(getMessage());
-                System.out.print( "File not found: " + e.getMessage() );
-
+                System.out.print("File not found: " + e.getMessage());
             } catch (IOException e) {
-                //Log.d(TAG, "Error accessing file: " + e.getMessage());
-                System.out.print( "Error accessing file: " + e.getMessage() );
+                System.out.print("Error accessing file: " + e.getMessage());
             }
         }
     };
-
 
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
@@ -479,40 +479,41 @@ public class SurfaceCamera extends AppCompatActivity {
     private void deleteImage(File file) {
         try {
             if (file != null && file.exists()) {
-                // Set up the projection (we only need the ID)
-                String[] projection = {MediaStore.Images.Media._ID};
+                // Delete from MediaStore first
+                getContentResolver().delete(
+                        MediaStore.Images.Media.INTERNAL_CONTENT_URI,  // Changed to INTERNAL
+                        MediaStore.Images.Media.DATA + "=?",
+                        new String[]{file.getAbsolutePath()}
+                );
 
-                // Match on the file path
-                String selection = MediaStore.Images.Media.DATA + " = ?";
-                String[] selectionArgs = new String[]{file.getAbsolutePath()};
-
-                // Query for the ID of the media matching the file path
-                Uri queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                ContentResolver contentResolver = getContentResolver();
-                Cursor c = contentResolver.query(queryUri, projection, selection, selectionArgs, null);
-
-                if (c != null && c.moveToFirst()) {
-                    // We found the ID. Deleting the item via the content provider will also remove the file
-                    long id = c.getLong(c.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-                    Uri deleteUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
-                    contentResolver.delete(deleteUri, null, null);
-                    c.close();
+                // Delete from Pictures directory
+                File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+                File[] files = picturesDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        if (f.getAbsolutePath().equals(file.getAbsolutePath())) {
+                            boolean deleted = f.delete();
+                            Log.d("DeleteImage", "Picture deleted: " + deleted);
+                        }
+                    }
                 }
 
-                // Delete the physical file
+                // Delete the original file
                 boolean deleted = file.delete();
-                if (deleted) {
-                    Log.d("DeleteImage", "File deleted successfully: " + file.getAbsolutePath());
-                } else {
-                    Log.e("DeleteImage", "Failed to delete file: " + file.getAbsolutePath());
-                }
-            } else {
-                Log.e("DeleteImage", "File doesn't exist: " + (file != null ? file.getAbsolutePath() : "null"));
+                Log.d("DeleteImage", "Original file deleted: " + deleted);
+
+                // Force media scan update
+                MediaScannerConnection.scanFile(
+                        getApplicationContext(),
+                        new String[]{picturesDir.getAbsolutePath()},
+                        null,
+                        null
+                );
+
             }
-        } catch (SecurityException e) {
-            Log.e("DeleteImage", "Security exception while deleting image", e);
         } catch (Exception e) {
             Log.e("DeleteImage", "Error deleting image", e);
+            e.printStackTrace();
         }
     }
 
