@@ -467,28 +467,44 @@ public class SurfaceCameraTravel extends AppCompatActivity {
 
 
     private void deleteImage(File file) {
-        // Set up the projection (we only need the ID)
-        String[] projection = {MediaStore.Images.Media._ID};
+        try {
+            if (file != null && file.exists()) {
+                // Set up the projection (we only need the ID)
+                String[] projection = {MediaStore.Images.Media._ID};
 
-        // Match on the file path
-        String selection = MediaStore.Images.Media.DATA + " = ?";
-        String[] selectionArgs = new String[]{file.getAbsolutePath()};
+                // Match on the file path
+                String selection = MediaStore.Images.Media.DATA + " = ?";
+                String[] selectionArgs = new String[]{file.getAbsolutePath()};
 
-        // Query for the ID of the media matching the file path
-        Uri queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        ContentResolver contentResolver = getContentResolver();
-        Cursor c = contentResolver.query(queryUri, projection, selection, selectionArgs, null);
-        if (c.moveToFirst()) {
-            // We found the ID. Deleting the item via the content provider will also remove the file
-            long id = c.getLong(c.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-            Uri deleteUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
-            contentResolver.delete(deleteUri, null, null);
-        } else {
-            // File not found in media store DB
+                // Query for the ID of the media matching the file path
+                Uri queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                ContentResolver contentResolver = getContentResolver();
+                Cursor c = contentResolver.query(queryUri, projection, selection, selectionArgs, null);
+
+                if (c != null && c.moveToFirst()) {
+                    // We found the ID. Deleting the item via the content provider will also remove the file
+                    long id = c.getLong(c.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
+                    Uri deleteUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+                    contentResolver.delete(deleteUri, null, null);
+                    c.close();
+                }
+
+                // Delete the physical file
+                boolean deleted = file.delete();
+                if (deleted) {
+                    Log.d("DeleteImage", "File deleted successfully: " + file.getAbsolutePath());
+                } else {
+                    Log.e("DeleteImage", "Failed to delete file: " + file.getAbsolutePath());
+                }
+            } else {
+                Log.e("DeleteImage", "File doesn't exist: " + (file != null ? file.getAbsolutePath() : "null"));
+            }
+        } catch (SecurityException e) {
+            Log.e("DeleteImage", "Security exception while deleting image", e);
+        } catch (Exception e) {
+            Log.e("DeleteImage", "Error deleting image", e);
         }
-        c.close();
     }
-
 
 
     public void FullScreencall() {

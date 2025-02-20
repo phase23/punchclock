@@ -20,19 +20,23 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.StatFs;
 import android.os.StrictMode;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.text.DecimalFormat;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -280,8 +284,31 @@ public class Myservice extends Service {
         }
     }
 
+    public static long getAvailableInternalStorage(Context context) {
+        File path = Environment.getDataDirectory();
+        StatFs stat = new StatFs(path.getPath());
+
+        // Use BlockSizeLong and AvailableBlocksLong for devices with API 18+
+        long blockSize = stat.getBlockSizeLong();
+        long availableBlocks = stat.getAvailableBlocksLong();
+
+        return availableBlocks * blockSize; // Returns available space in bytes
+    }
+
+    public static String formatSize(long size) {
+        if (size <= 0) return "0";
+        final String[] units = new String[] { "B", "KB", "MB", "GB", "TB" };
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups))
+                + " " + units[digitGroups];
+    }
+
     public void  batteryLevel(Context context, String Device)
     {
+
+        long internalAvailable = getAvailableInternalStorage(this);
+        String readableInternal = formatSize(internalAvailable);
+
         Intent intent  = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         int    level   = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
         int    scale   = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
@@ -312,7 +339,7 @@ public class Myservice extends Service {
             Long tsLong = System.currentTimeMillis()/1000;
 
             try {
-                sendoutdevicestate("https://punchclock.ai/devicestate.php?percentage="+percent + "&charge="+ chargestautus + "&deviceid=" + getdeviceid + "&timestamp="+tsLong);
+                sendoutdevicestate("https://punchclock.ai/devicestate.php?percentage="+percent + "&charge="+ chargestautus + "&deviceid=" + getdeviceid + "&timestamp="+tsLong + "&storage="+readableInternal);
 
             } catch (IOException e) {
                 e.printStackTrace();
