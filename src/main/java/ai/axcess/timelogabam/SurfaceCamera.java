@@ -205,7 +205,7 @@ public class SurfaceCamera extends AppCompatActivity {
         }
     }
 
-
+    
     public static Camera getCameraInstance(){
         Camera c = null;
         try {
