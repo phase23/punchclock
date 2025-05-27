@@ -15,9 +15,10 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 import android.Manifest;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
@@ -30,7 +31,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.StrictMode;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
@@ -48,470 +48,377 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 200;
-    ImageView facelog;
-    ImageView nfcread;
-    ImageView away;
-    ImageView wrenhr;
-    ImageView pinpad;
-    TextView textView;
-    TextView locationplace;
-    TextView justwait;
-    String responseBody;
-    String responseLocation;
-    String deviceId;
-    public Handler handler;
-    String returndevice;
-    View thisview;
-    ImageView adminlevel;
     private static final int MY_CAMERA_REQUEST_CODE = 100;
     private static final int MY_STORAGE_REQUEST_CODE = 101;
-    int ALL_PERMISSIONS = 102;
+    private static final int ALL_PERMISSIONS = 102;
+
+    // UI Components
+    private ImageView facelog, nfcread, away, wrenhr, pinpad, adminlevel;
+    private TextView textView, locationplace, justwait;
+    private View thisview;
+
+    // Core variables
+    private String deviceId;
+    private Handler mainHandler;
     private WifiManager wifiManager;
-    WifiConfiguration currentConfig;
-    WifiManager.LocalOnlyHotspotReservation hotspotReservation;
-    String locationnow;
-    String thelocation;
-    Handler handler2;
+    private String locationnow;
+    private String thelocation;
+    private String returndevice;
+
+    // Network and threading
+    private ExecutorService backgroundExecutor;
+    private OkHttpClient httpClient;
+    private volatile boolean isDestroyed = false;
+
+    // Cache for quick access
+    private Boolean isOnlineCache = null;
+    private long lastOnlineCheck = 0;
+    private static final long ONLINE_CHECK_CACHE_DURATION = 5000; // 5 seconds
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        final ProgressBar pb = (ProgressBar) findViewById(R.id.progress_loader);
-        final String[] permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
-        // ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
 
-        justwait = (TextView) findViewById(R.id.wait);
-        thisview = (View) findViewById(R.id.barup);
-        adminlevel = (ImageView) findViewById(R.id.gear);
-        away = (ImageView) findViewById(R.id.ontravel);
-        pinpad = (ImageView) findViewById(R.id.dailpad);
-        wrenhr = (ImageView) findViewById(R.id.wrench);
+        // Initialize core components first
+        initializeCoreComponents();
 
+        // Setup UI immediately (no blocking operations)
+        setupUIComponents();
+
+        // Setup device policy and lock task
+        setupDevicePolicy();
+
+        // Check permissions (non-blocking)
+        checkAndRequestPermissions();
+
+        // Initialize background operations
+        initializeBackgroundOperations();
+
+        // Start all network operations in background
+        startBackgroundTasks();
+    }
+
+    private void initializeCoreComponents() {
+        mainHandler = new Handler(Looper.getMainLooper());
+        backgroundExecutor = Executors.newFixedThreadPool(3); // Limit concurrent operations
+
+        // Initialize HTTP client with optimized settings
+        httpClient = new OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
+                .build();
+
+        deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        WifiConfiguration wifiConfig = new WifiConfiguration();
 
-        handler2 = new Handler(Looper.getMainLooper());
-        deviceId = Settings.Secure.getString(this.getContentResolver(),
-                Settings.Secure.ANDROID_ID);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
 
+    private void setupUIComponents() {
+        // Initialize all UI components
+        justwait = findViewById(R.id.wait);
+        thisview = findViewById(R.id.barup);
+        adminlevel = findViewById(R.id.gear);
+        away = findViewById(R.id.ontravel);
+        pinpad = findViewById(R.id.dailpad);
+        wrenhr = findViewById(R.id.wrench);
+        facelog = findViewById(R.id.facial);
+        nfcread = findViewById(R.id.nfcfob);
+        textView = findViewById(R.id.setinternet);
+        locationplace = findViewById(R.id.location);
 
-       createfile();
+        // Set initial UI state
+        locationplace.setText("Loading location...");
+        textView.setText("Checking connection...");
 
-        showWritePermissionSettings();
-        setWifiEnabled(wifiConfig, false); // Disable the WiFi hotspot
+        // Setup click listeners immediately (they'll handle their own connectivity checks)
+        setupClickListeners();
+    }
 
-        boolean connected = false;
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED ||
-                connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED) {
-            //we are connected to a network
-            connected = true;
-        } else {
-            connected = false;
-        }
+    private void setupClickListeners() {
+        adminlevel.setOnClickListener(v -> {
+            justwait.setVisibility(View.VISIBLE);
+            startActivity(new Intent(MainActivity.this, Adminpanel.class));
+        });
 
+        wrenhr.setOnClickListener(v -> {
+            justwait.setVisibility(View.VISIBLE);
+            startActivity(new Intent(MainActivity.this, aidHelp.class));
+        });
 
-        if (!connected) {
-            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-            Intent nointernet = new Intent(MainActivity.this, Nointernet.class);
-            startActivity(nointernet);
+        facelog.setOnClickListener(v -> new OptimizedCamTask().executeOnExecutor(backgroundExecutor));
 
-        } else {
-
-            Intent i = new Intent(this, Myservice.class);
-            this.startService(i);
-
-            adminlevel.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    justwait.setVisibility(View.VISIBLE);
-                    Intent goadmin = new Intent(MainActivity.this, Adminpanel.class);
-                    startActivity(goadmin);
-
-
-                }
-            });
-
-            wrenhr.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    justwait.setVisibility(View.VISIBLE);
-                    Intent goadmin = new Intent(MainActivity.this, aidHelp.class);
-                    startActivity(goadmin);
-
-
-                }
-            });
-
-
-
-        /*
-        handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            public void run() {
-                // TODO: Your application init goes here.
-                Intent mInHome = new Intent(MainActivity.this, Sleepscreen.class);
-                MainActivity.this.startActivity(mInHome);
-                MainActivity.this.finish();
-            }
-        }, 30000);
-*/
-
-
-            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-            StrictMode.setThreadPolicy(policy);
-
-
-            //returndevice = isregistered();
-
-            try {
-                devisregistered(" https://punchclock.ai/devicesetup.php?action=checkdevice&token=" + deviceId);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-
-            facelog = (ImageView) findViewById(R.id.facial);
-            nfcread = (ImageView) findViewById(R.id.nfcfob);
-            textView = (TextView) findViewById(R.id.setinternet);
-            locationplace = (TextView) findViewById(R.id.location);
-
-            //FullScreencall();
-
-
-            // lcheckinternet();
-
-
-            boolean online = isOnline();
-            if (!online) {
-
-                Log.i("Online Status", "Connected check....");
-                textView.setText("No Internet Connection");
-            } else {
-                textView.setText("");
-            }
-
-
-
-            //String thelocation = getdevicelocation(deviceId);
-            //locationplace.setText("" + thelocation + " > Choose Option");
-
-            try {
-                getdeviceloc("https://punchclock.ai/getdevicelocation.php?token=" + deviceId);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-            Log.i("log device", deviceId);
-
-            /*
-            facelog.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-
-
-                    //pb.setVisibility(visible);
-                    //thisview.setVisibility(View.INVISIBLE);
-                    justwait.setVisibility(View.VISIBLE);
-
-                    boolean online = isOnline() ;
-                    if(online) {
-                        String cunq = readFile();
-                        justwait.setVisibility(View.VISIBLE);
-                        Log.i("log owner", cunq);
-
-                        Log.i("log owner", cunq);
-                        Intent intent = new Intent(MainActivity.this, SurfaceCamera.class);
+        away.setOnClickListener(v -> {
+            justwait.setVisibility(View.VISIBLE);
+            backgroundExecutor.execute(() -> {
+                if (isOnlineFast()) {
+                    String cunq = readFile();
+                    mainHandler.post(() -> {
+                        Intent intent = new Intent(MainActivity.this, SurfaceCameraTravel.class);
                         intent.putExtra("cunq", cunq);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                        startActivityForResult(intent, 0);
-                        overridePendingTransition(0, 0); //0 for no animation
                         startActivity(intent);
-
-                    } else {
-
-                        Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-                        Intent errorpunch = new Intent(MainActivity.this, Nointernet.class);
-                        startActivity(errorpunch);
-
-
-                    }
-
-
-                }
-
-            });
-
-*/
-
-            facelog.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    new camTask().execute();
+                        overridePendingTransition(0, 0);
+                    });
+                } else {
+                    showNoInternetError();
                 }
             });
+        });
 
-            away.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
+        pinpad.setOnClickListener(v -> new OptimizedPinpadTask().executeOnExecutor(backgroundExecutor));
 
-                    //thisview.setVisibility(View.INVISIBLE);
-                    justwait.setVisibility(View.VISIBLE);
-
-                    boolean online = isOnline() ;
-                    if(online) {
-                        String cunq = readFile();
+        nfcread.setOnClickListener(v -> {
+            backgroundExecutor.execute(() -> {
+                if (isOnlineFast()) {
+                    String cunq = readFile();
+                    mainHandler.post(() -> {
                         justwait.setVisibility(View.VISIBLE);
-                        Log.i("log owner", cunq);
-
-
-                    Log.i("log owner", cunq);
-
-                    Intent intent = new Intent(MainActivity.this, SurfaceCameraTravel.class);
-                    intent.putExtra("cunq", cunq);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                    startActivityForResult(intent, 0);
-                    overridePendingTransition(0, 0); //0 for no animation
-
-                    startActivity(intent);
-
-                    } else {
-
-                        Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-                        Intent errorpunch = new Intent(MainActivity.this, Nointernet.class);
-                        startActivity(errorpunch);
-                    }
-
-
-                }
-
-            });
-
-
-            pinpad.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    new pinpadTask().execute();
-                }
-            });
-
-            /*
-
-            pinpad.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-
-
-                    boolean online = isOnline() ;
-                    if(online) {
-                        String cunq = readFile();
-                        justwait.setVisibility(View.VISIBLE);
-                        Log.i("log owner", cunq);
-
-                        Intent intent = new Intent(MainActivity.this, Pinpad.class);
-                        intent.putExtra("cunq", cunq);
-                        startActivity(intent);
-
-
-                            } else {
-
-                    Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-                    Intent errorpunch = new Intent(MainActivity.this, Nointernet.class);
-                    startActivity(errorpunch);
-
-
-                 }
-
-
-                }
-
-            });
-
-            */
-
-            nfcread.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                    boolean online = isOnline() ;
-                    if(online) {
-                        String cunq = readFile();
-                        justwait.setVisibility(View.VISIBLE);
-                        Log.i("log owner", cunq);
-
                         Intent intent = new Intent(MainActivity.this, fobOptions.class);
                         intent.putExtra("cunq", cunq);
                         startActivity(intent);
-
-                    } else {
-
-                        Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-                        Intent errorpunch = new Intent(MainActivity.this, Nointernet.class);
-                        startActivity(errorpunch);
-
-
-                    }
-
-
+                    });
+                } else {
+                    showNoInternetError();
                 }
+            });
+        });
+    }
 
+    private void setupDevicePolicy() {
+        try {
+            DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+            ComponentName admin = new ComponentName(this, MyDeviceAdminReceiver.class);
+            dpm.setLockTaskPackages(admin, new String[]{"ai.axcess.timelogabam"});
+            startLockTask();
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error setting up device policy", e);
+        }
+    }
+
+    private void checkAndRequestPermissions() {
+        final String[] permissions = new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+        };
+
+        if (!hasPermissions(this, permissions)) {
+            ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
+        }
+    }
+
+    private void initializeBackgroundOperations() {
+        // Create base file if needed
+        backgroundExecutor.execute(this::createfile);
+
+        // Setup WiFi hotspot protection
+        backgroundExecutor.execute(() -> {
+            try {
+                WifiConfiguration wifiConfig = new WifiConfiguration();
+                setWifiEnabled(wifiConfig, false);
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error disabling WiFi hotspot", e);
+            }
+        });
+
+        // Show write permission settings if needed
+        backgroundExecutor.execute(() -> {
+            try {
+                showWritePermissionSettings();
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error checking write permissions", e);
+            }
+        });
+    }
+
+    private void startBackgroundTasks() {
+        // Quick connectivity check first
+        backgroundExecutor.execute(() -> {
+            boolean connected = isConnectedQuick();
+
+            mainHandler.post(() -> {
+                if (!connected) {
+                    textView.setText("No Internet Connection");
+                    Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
+                    startActivity(new Intent(MainActivity.this, Nointernet.class));
+                } else {
+                    textView.setText("Connected");
+                    // Start service only if connected
+                    startService(new Intent(MainActivity.this, Myservice.class));
+                }
             });
 
-
-            if (!hasPermissions(this, permissions)) {
-                ActivityCompat.requestPermissions(this, permissions, ALL_PERMISSIONS);
+            if (connected) {
+                // Start other background tasks in parallel
+                backgroundExecutor.execute(this::checkDeviceRegistration);
+                backgroundExecutor.execute(this::loadDeviceLocation);
             }
-
-
-                        /*
-                          if (checkPermission()) {
-                            //main logic or main code
-                            // . write your main code to execute, It will execute if the permission is already given.
-
-                            } else {
-                            requestPermission();
-                                }
-                         */
-
-
-        }//end else
-
-
-        /*
-        if (Build.VERSION.SDK_INT >= 23) {
-
-
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_STORAGE_REQUEST_CODE);
-            }
-
-
-            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, MY_CAMERA_REQUEST_CODE);
-            }
-
-        }
-
-
-         */
-
+        });
     }
 
-
-    public boolean isOnline() {
-        Runtime runtime = Runtime.getRuntime();
+    private boolean isConnectedQuick() {
         try {
-            Process ipProcess = runtime.exec("/system/bin/ping -c 1 8.8.8.8");
-            int exitValue = ipProcess.waitFor();
-            return (exitValue == 0);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+        } catch (Exception e) {
+            return false;
         }
-
-        return false;
     }
 
+    private boolean isOnlineFast() {
+        long currentTime = System.currentTimeMillis();
 
+        // Use cached result if recent
+        if (isOnlineCache != null && (currentTime - lastOnlineCheck) < ONLINE_CHECK_CACHE_DURATION) {
+            return isOnlineCache;
+        }
+
+        // Quick connectivity check first
+        if (!isConnectedQuick()) {
+            isOnlineCache = false;
+            lastOnlineCheck = currentTime;
+            return false;
+        }
+
+        // Ping test (but with timeout)
+        try {
+            Process process = Runtime.getRuntime().exec("/system/bin/ping -c 1 -W 2 8.8.8.8");
+            boolean result = process.waitFor() == 0;
+            isOnlineCache = result;
+            lastOnlineCheck = currentTime;
+            return result;
+        } catch (Exception e) {
+            isOnlineCache = false;
+            lastOnlineCheck = currentTime;
+            return false;
+        }
+    }
+
+    private void checkDeviceRegistration() {
+        if (isDestroyed) return;
+
+        try {
+            String url = "https://punchclock.ai/devicesetup.php?action=checkdevice&token=" + deviceId;
+            Request request = new Request.Builder().url(url).build();
+
+            httpClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    Log.e("MainActivity", "Device registration check failed", e);
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    if (isDestroyed) return;
+
+                    String result = response.body().string();
+                    Log.i("DeviceCheck", result);
+
+                    mainHandler.post(() -> {
+                        if (!isDestroyed && result.trim().equals("not found")) {
+                            startActivity(new Intent(MainActivity.this, Startup.class));
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error checking device registration", e);
+        }
+    }
+
+    private void loadDeviceLocation() {
+        if (isDestroyed) return;
+
+        try {
+            String url = "https://punchclock.ai/getdevicelocation.php?token=" + deviceId;
+            Request request = new Request.Builder().url(url).build();
+
+            httpClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    Log.e("MainActivity", "Location loading failed", e);
+                    mainHandler.post(() -> {
+                        if (!isDestroyed) {
+                            locationplace.setText("Location unavailable > Choose Option");
+                        }
+                    });
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    if (isDestroyed) return;
+
+                    String location = response.body().string();
+                    Log.i("DeviceLocation", location);
+
+                    mainHandler.post(() -> {
+                        if (!isDestroyed) {
+                            thelocation = location;
+                            locationplace.setText(location + " > Choose Option");
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error loading device location", e);
+        }
+    }
+
+    private void showNoInternetError() {
+        mainHandler.post(() -> {
+            if (!isDestroyed) {
+                Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
+                startActivity(new Intent(MainActivity.this, Nointernet.class));
+            }
+        });
+    }
 
     public String readFile() {
         String fileName = "base.txt";
         StringBuilder stringBuilder = new StringBuilder();
 
-        FileInputStream fis = null;
-        InputStreamReader isr = null;
-        BufferedReader br = null;
+        try (FileInputStream fis = openFileInput(fileName);
+             InputStreamReader isr = new InputStreamReader(fis);
+             BufferedReader br = new BufferedReader(isr)) {
 
-        try {
-            fis = openFileInput(fileName);
-            isr = new InputStreamReader(fis);
-            br = new BufferedReader(isr);
             String line;
-
             while ((line = br.readLine()) != null) {
                 stringBuilder.append(line);
             }
-
             locationnow = stringBuilder.toString();
-            // Use the file contents as needed
-            // Uncomment the line below to display a toast message with the content
-            // Toast.makeText(getApplicationContext(), "Serlat: " + locationnow, Toast.LENGTH_LONG).show();
+
         } catch (IOException e) {
-            e.printStackTrace();
-            // Error reading file
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (isr != null) {
-                try {
-                    isr.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            Log.e("MainActivity", "Error reading file", e);
+            locationnow = "";
         }
 
-        return  locationnow;
+        return locationnow;
     }
 
-
     public void createfile() {
-
-
-
         String fileName = "base.txt";
         String content = "";
 
         File file = new File(getFilesDir(), fileName);
-
         if (!file.exists()) {
-            FileOutputStream fos = null;
-            try {
-                fos = openFileOutput(fileName, Context.MODE_PRIVATE);
+            try (FileOutputStream fos = openFileOutput(fileName, Context.MODE_PRIVATE)) {
                 fos.write(content.getBytes());
-                // File written successfully
             } catch (IOException e) {
-                e.printStackTrace();
-                // Error writing file
-            } finally {
-                if (fos != null) {
-                    try {
-                        fos.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
+                Log.e("MainActivity", "Error creating file", e);
             }
-        } else {
-            // File already exists, handle accordingly
         }
-
-
     }
 
     public static boolean hasPermissions(Context context, String... permissions) {
@@ -525,545 +432,152 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == MY_CAMERA_REQUEST_CODE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "camera permission granted", Toast.LENGTH_LONG).show();
-            } else {
-                Toast.makeText(this, "camera permission denied", Toast.LENGTH_LONG).show();
-                //Intent nopermission = new Intent(Register.this, Nopermission.class);
-                //startActivity(nopermission);
 
+        if (requestCode == MY_CAMERA_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
             }
         }
-
 
         if (requestCode == MY_STORAGE_REQUEST_CODE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "storage permission granted", Toast.LENGTH_LONG).show();
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Storage permission granted", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "storage permission denied", Toast.LENGTH_LONG).show();
-                //Intent nopermission = new Intent(Register.this, Nopermission.class);
-                //startActivity(nopermission);
-
+                Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
             }
         }
-
-
     }
-
-
-    public  void sendhotspot(){
-
-
-        String getdeviceid = Settings.Secure.getString(this.getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-        Long tsLong = System.currentTimeMillis()/1000;
-
-        String url = "https://punchclock.ai/api/hotspot.php?timestamp="+tsLong + "&deviceid=" + getdeviceid;
-
-        Log.i("action url",url);
-        OkHttpClient client = new OkHttpClient();
-
-
-        // String contentType = fileSource.toURL().openConnection().getContentType();
-
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("device",getdeviceid )
-                .build();
-        Request request = new Request.Builder()
-
-                .url(url)//your webservice url
-                .post(requestBody)
-                .build();
-        try {
-            //String responseBody;
-            okhttp3.Response response = client.newCall(request).execute();
-            // Response response = client.newCall(request).execute();
-            if (response.isSuccessful()){
-                Log.i("SUCC",""+response.message());
-
-            }
-            String resp = response.message();
-            responseBody =  response.body().string();
-            Log.i("respBody",responseBody);
-
-
-
-            Log.i("MSG",resp);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-
-    }
-
-    public void FullScreencall() {
-        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
-            View v = this.getWindow().getDecorView();
-            v.setSystemUiVisibility(View.GONE);
-        } else if (Build.VERSION.SDK_INT >= 19) {
-            //for new api versions.
-            View decorView = getWindow().getDecorView();
-            int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-            decorView.setSystemUiVisibility(uiOptions);
-        }
-    }
-
-    private boolean checkPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted
-            return false;
-        }
-        return true;
-    }
-
-    private void requestPermission() {
-
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.CAMERA},
-                PERMISSION_REQUEST_CODE);
-
-        /*
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                MY_STORAGE_REQUEST_CODE);
-*/
-
-
-    }
-
-
-    private void lcheckinternet() {
-
-        ConnectivityManager manager = (ConnectivityManager) getApplicationContext()
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = manager.getActiveNetworkInfo();
-        if (null != activeNetwork) {
-            if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
-                //we have WIFI
-                //textView.setVisibility(View.VISIBLE);
-                //textView.setText("please wait...");
-            }
-            if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
-                textView.setVisibility(View.VISIBLE);
-                //textView.setText("please wait...");
-            }
-        } else {
-            //we have no connection :(
-            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-            textView.setVisibility(View.VISIBLE);
-            textView.setText("No Internet Connection");
-        }
-    }
-
-
-    private void checkinternet() {
-        boolean online = isOnline() ;
-
-
-        if(online) {
-            //do nothing
-        } else {
-            //we have no connection :(
-            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-            textView.setVisibility(View.VISIBLE);
-            textView.setText("No Internet Connection");
-        }
-    }
-
-
-    /*
-
-    private void checkinternet() {
-
-        ConnectivityManager manager = (ConnectivityManager) getApplicationContext()
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = manager.getActiveNetworkInfo();
-        if (null != activeNetwork) {
-            if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
-                //we have WIFI
-                //textView.setVisibility(View.VISIBLE);
-                //textView.setText("please wait...");
-            }
-            if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
-                //textView.setVisibility(View.VISIBLE);
-                //textView.setText("please wait...");
-            }
-        } else {
-            //we have no connection :(
-            Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-            textView.setVisibility(View.VISIBLE);
-            textView.setText("No Internet Connection");
-        }
-    }
-
-
-*/
-
-
-
-    void getdeviceloc(String url) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        Log.i("ddevice",url);
-        OkHttpClient client = new OkHttpClient();
-        client.newCall(request)
-                .enqueue(new Callback() {
-                    @Override
-                    public void onFailure(final Call call, IOException e) {
-                        Log.i("ddevice","errot"); // Error
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                // For the example, you can show an error dialog or a toast
-                                // on the main UI thread
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onResponse(Call call, final Response response) throws IOException {
-
-
-                        thelocation = response.body().string();
-                        Log.i("ddevice",thelocation);
-
-                        handler2.post(new Runnable() {
-                            @Override
-                            public void run() {
-
-                                locationplace.setText("" + thelocation + " > Choose Option");
-
-
-                            }
-                        });
-
-
-                    }//end if
-
-
-
-
-                });
-
-    }
-
-
-    public String getdevicelocation(String deviceid) {
-
-        String url = "https://punchclock.ai/getdevicelocation.php?token=" + deviceid;
-
-
-        Log.i("action url", url);
-
-        OkHttpClient client = new OkHttpClient();
-
-
-        // String contentType = fileSource.toURL().openConnection().getContentType();
-
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("deviceid", deviceid)
-                .build();
-        Request request = new Request.Builder()
-
-                .url(url)//your webservice url
-                .post(requestBody)
-                .build();
-        try {
-            //String responseBody;
-            okhttp3.Response response = client.newCall(request).execute();
-            // Response response = client.newCall(request).execute();
-            if (response.isSuccessful()) {
-                Log.i("SUCC", "" + response.message());
-
-            }
-            String resp = response.message();
-            responseLocation = response.body().string();
-            Log.i("respBody:main", responseLocation);
-
-
-            Log.i("MSG", resp);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return responseLocation;
-
-    }//emd
-
-
-
-    void devisregistered(String url) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        Log.i("ddevice",url);
-        OkHttpClient client = new OkHttpClient();
-        client.newCall(request)
-                .enqueue(new Callback() {
-                    @Override
-                    public void onFailure(final Call call, IOException e) {
-                        Log.i("ddevice","errot"); // Error
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                // For the example, you can show an error dialog or a toast
-                                // on the main UI thread
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onResponse(Call call, final Response response) throws IOException {
-
-
-                        thelocation = response.body().string();
-                        Log.i("ddevice",thelocation);
-
-                        handler2.post(new Runnable() {
-                            @Override
-                            public void run() {
-
-                                returndevice = thelocation.trim();
-
-                                if (returndevice.equals("not found")) {
-                                    Intent devicesetup = new Intent(MainActivity.this, Startup.class);
-                                    startActivity(devicesetup);
-                                }
-
-
-                            }
-                        });
-
-
-                    }//end if
-
-
-
-
-                });
-
-    }
-
-
-    public String isregistered() {
-
-
-        String thisdevice = Settings.Secure.getString(this.getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-
-        String url = "https://punchclock.ai/devicesetup.php?action=checkdevice&token=" + thisdevice;
-        Log.i("action url", url);
-        OkHttpClient client = new OkHttpClient();
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("deviceid", thisdevice)
-                .build();
-        Request request = new Request.Builder()
-                .url(url)//your webservice url
-                .post(requestBody)
-                .build();
-        try {
-            //String responseBody;
-            okhttp3.Response response = client.newCall(request).execute();
-            // Response response = client.newCall(request).execute();
-            if (response.isSuccessful()) {
-                Log.i("SUCC", "" + response.message());
-            }
-            String resp = response.message();
-            responseLocation = response.body().string();
-            Log.i("respBody:main", responseLocation);
-            Log.i("MSG", resp);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return responseLocation;
-
-    }//emd
-
 
     private boolean showWritePermissionSettings() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             if (!Settings.System.canWrite(this)) {
-                Log.v("DANG", " " + !Settings.System.canWrite(this));
-                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
                 intent.setData(Uri.parse("package:" + this.getPackageName()));
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 this.startActivity(intent);
                 return false;
             }
         }
-        return true; //Permission already given
+        return true;
     }
-
 
     public boolean setWifiEnabled(WifiConfiguration wifiConfig, boolean enabled) {
-
         try {
-            if (enabled) { //disables wifi hotspot if it's already enabled
+            if (enabled) {
                 wifiManager.setWifiEnabled(false);
-                Log.i("Hotspot Disabed", "Connected turn it off....");
-                Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DECTECTED! Hotspot NOT available", Toast.LENGTH_LONG).show();
-
-                sendhotspot();
+                Log.i("MainActivity", "Hotspot disabled for security");
+                Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DETECTED! Hotspot NOT available", Toast.LENGTH_LONG).show();
+                backgroundExecutor.execute(this::sendhotspot);
             }
 
-            Method method = wifiManager.getClass()
-                    .getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+            Method method = wifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
             return (Boolean) method.invoke(wifiManager, wifiConfig, enabled);
         } catch (Exception e) {
-            Log.e(this.getClass().toString(), "", e);
+            Log.e("MainActivity", "Error setting WiFi enabled state", e);
             return false;
         }
     }
 
-
-    public String getdeviceowner( String deviceid ) {
-
-        String url = "https://punchclock.ai/getdeviceinfo.php?token="+deviceid;
-
-
-        Log.i("action url",url);
-
-        OkHttpClient client = new OkHttpClient();
-
-
-        // String contentType = fileSource.toURL().openConnection().getContentType();
-
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("deviceid",deviceid )
-                .build();
-        Request request = new Request.Builder()
-
-                .url(url)//your webservice url
-                .post(requestBody)
-                .build();
+    public void sendhotspot() {
         try {
-            //String responseBody;
-            okhttp3.Response response = client.newCall(request).execute();
-            // Response response = client.newCall(request).execute();
-            if (response.isSuccessful()){
-                Log.i("SUCC",""+response.message());
+            Long tsLong = System.currentTimeMillis() / 1000;
+            String url = "https://punchclock.ai/api/hotspot.php?timestamp=" + tsLong + "&deviceid=" + deviceId;
 
-            }
-            String resp = response.message();
-            responseBody =  response.body().string();
-            Log.i("respBody:main",responseBody);
+            RequestBody requestBody = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("device", deviceId)
+                    .build();
 
+            Request request = new Request.Builder().url(url).post(requestBody).build();
 
+            httpClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    Log.e("MainActivity", "Hotspot report failed", e);
+                }
 
-            Log.i("MSG",resp);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return responseBody;
-
-    }//emd
-
-
-
-    public boolean hostAvailable(String host, int port) {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(host, port), 2000);
-            return true;
-        } catch (IOException e) {
-            // Either we have a timeout or unreachable host or failed DNS lookup
-            System.out.println(e);
-            return false;
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    Log.i("MainActivity", "Hotspot reported: " + response.body().string());
+                }
+            });
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error sending hotspot report", e);
         }
     }
-
 
     @Override
-    public void onBackPressed()
-    {
-
-        //thats it
+    public void onBackPressed() {
+        // Disabled for kiosk mode
     }
 
-    private class pinpadTask extends AsyncTask<Void, Void, Boolean> {
+    @Override
+    protected void onDestroy() {
+        isDestroyed = true;
+
+        if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
+            backgroundExecutor.shutdown();
+            try {
+                if (!backgroundExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                    backgroundExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                backgroundExecutor.shutdownNow();
+            }
+        }
+
+        super.onDestroy();
+    }
+
+    // Optimized AsyncTask classes
+    private class OptimizedPinpadTask extends AsyncTask<Void, Void, Boolean> {
         @Override
         protected Boolean doInBackground(Void... voids) {
-            return isOnline();
+            return isOnlineFast();
         }
 
         @Override
         protected void onPostExecute(Boolean online) {
+            if (isDestroyed) return;
+
             if (online) {
                 String cunq = readFile();
                 justwait.setVisibility(View.VISIBLE);
-                Log.i("log owner", cunq);
-
                 Intent intent = new Intent(MainActivity.this, Pinpad.class);
                 intent.putExtra("cunq", cunq);
                 startActivity(intent);
-
-                finish(); // Finish the current Activity
-
             } else {
-                Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-                Intent errorpunch = new Intent(MainActivity.this, Nointernet.class);
-                startActivity(errorpunch);
+                showNoInternetError();
             }
         }
-
-
     }
 
-
-    private class camTask extends AsyncTask<Void, Void, Boolean> {
+    private class OptimizedCamTask extends AsyncTask<Void, Void, Boolean> {
         @Override
         protected Boolean doInBackground(Void... voids) {
-            return isOnline();
+            return isOnlineFast();
         }
 
         @Override
         protected void onPostExecute(Boolean online) {
+            if (isDestroyed) return;
+
             if (online) {
                 String cunq = readFile();
                 justwait.setVisibility(View.VISIBLE);
-                Log.i("log owner", cunq);
-
                 Intent intent = new Intent(MainActivity.this, SurfaceCamera.class);
                 intent.putExtra("cunq", cunq);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                startActivityForResult(intent, 0);
-                overridePendingTransition(0, 0); //0 for no animation
                 startActivity(intent);
-
-                finish(); // Finish the current Activity
-
+                overridePendingTransition(0, 0);
             } else {
-                Toast.makeText(getApplicationContext(), "Check Internet & Restart App", Toast.LENGTH_LONG).show();
-                Intent errorpunch = new Intent(MainActivity.this, Nointernet.class);
-                startActivity(errorpunch);
+                showNoInternetError();
             }
         }
-
-
     }
-
-
-
-
-
 }
-
-
-
-
