@@ -26,8 +26,11 @@ public class Nointernet extends AppCompatActivity {
         btnrelaunch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //justwait.setVisibility(View.VISIBLE);
+                startActivity(new Intent(Nointernet.this, aidHelp.class));
+                //justwait.setVisibility(View.INVISIBLE);
 
-                triggerRebirth(getApplicationContext());
+              //  triggerRebirth(getApplicationContext());
 
             }
 

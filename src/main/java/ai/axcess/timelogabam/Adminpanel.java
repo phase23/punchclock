@@ -25,6 +25,7 @@ import java.io.IOException;
 public class Adminpanel extends AppCompatActivity {
     Button ccancel;
     Button llogin;
+    Button checkupgrade;
     EditText pin;
     EditText email;
     String responseLocation;
@@ -37,7 +38,7 @@ public class Adminpanel extends AppCompatActivity {
 
         ccancel = (Button)findViewById(R.id.login_cancel);
         llogin = (Button)findViewById(R.id.login_now);
-
+        checkupgrade = (Button)findViewById(R.id.upgrade);
 
         keypass = (ImageView) findViewById(R.id.keyfobpass);
 
@@ -60,6 +61,19 @@ public class Adminpanel extends AppCompatActivity {
 
             }
         });
+
+        checkupgrade.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Intent nfc = new Intent(Adminpanel.this, Upgrade.class);
+                startActivity(nfc);
+
+
+
+            }
+        });
+
 
 
 

@@ -197,11 +197,11 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="87dp"
-        android:layout_marginLeft="87dp"
-        android:layout_marginTop="244dp"
-        android:layout_marginEnd="466dp"
-        android:layout_marginBottom="17dp"
+        android:layout_marginStart="86dp"
+        android:layout_marginLeft="86dp"
+        android:layout_marginTop="237dp"
+        android:layout_marginEnd="467dp"
+        android:layout_marginBottom="24dp"
         app:srcCompat="@drawable/traveltr"
         app:tint="#FF685D" />
 
@@ -223,6 +223,34 @@
         android:layout_marginBottom="36dp"
         app:srcCompat="@drawable/keypad" />
 
+    <TextView
+        android:id="@+id/connstate"
+        android:layout_width="325dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="389dp"
+        android:layout_marginEnd="400dp"
+        android:layout_marginBottom="4dp"
+        android:text="TextView" />
+
+    <TextView
+        android:id="@+id/batterylife"
+        android:layout_width="98dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="607dp"
+        android:layout_marginTop="374dp"
+        android:layout_marginEnd="26dp"
+        android:layout_marginBottom="18dp"
+        android:gravity="right"
+        android:text="--%" />
 
 
 </RelativeLayout>

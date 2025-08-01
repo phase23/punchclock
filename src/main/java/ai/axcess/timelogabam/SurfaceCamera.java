@@ -2,6 +2,7 @@ package ai.axcess.timelogabam;
 
 import static android.content.ContentValues.TAG;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -131,7 +132,7 @@ public class SurfaceCamera extends AppCompatActivity {
         setupClickListeners();
 
         // Show loading state
-        campause.setText("Initializing camera...");
+        campause.setText("Please Wait...");
         campause.setVisibility(View.VISIBLE);
     }
 
@@ -216,6 +217,8 @@ public class SurfaceCamera extends AppCompatActivity {
 
                         isCameraReady = true;
                         campause.setVisibility(View.GONE);
+                       // View loadingOverlay = findViewById(R.id.loading_overlay);
+                        //loadingOverlay.setVisibility(View.GONE);
 
                         Log.i("Camera", "Camera initialized successfully");
                     });
@@ -244,9 +247,18 @@ public class SurfaceCamera extends AppCompatActivity {
     }
 
     private void returnToMain() {
+        /*
         Intent intent = new Intent(SurfaceCamera.this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(intent);
         finish();
+
+      */
+
+        Intent intent = new Intent(SurfaceCamera.this, MainActivity.class);
+
+        startActivity(intent);
+        ((Activity) SurfaceCamera.this).finish();
     }
 
     private void resetCameraButton() {

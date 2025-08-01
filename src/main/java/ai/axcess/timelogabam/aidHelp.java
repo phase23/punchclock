@@ -4,23 +4,25 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.Manifest;
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
-import android.telephony.TelephonyManager;
-import android.telephony.SignalStrength;
-import android.telephony.PhoneStateListener;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+import android.telephony.PhoneStateListener;
+import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -42,17 +44,14 @@ public class aidHelp extends AppCompatActivity {
     private TextView statusText;
     private Switch toggleSwitch;
     private int signalStrengthDbm = -1;
-
-    // Add flag to track if we're in searching state
     private boolean isSearchingNetwork = false;
     private long searchStartTime = 0;
-    private static final long SEARCH_TIMEOUT = 10000; // 10 seconds timeout
+    private static final long SEARCH_TIMEOUT = 10000;
     private Handler searchHandler = new Handler();
 
     private BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            // Check if we have an actual network connection before clearing search state
             if (isSearchingNetwork && isNetworkConnected()) {
                 isSearchingNetwork = false;
                 searchHandler.removeCallbacksAndMessages(null);
@@ -65,7 +64,6 @@ public class aidHelp extends AppCompatActivity {
         }
     };
 
-    // Runnable to handle search timeout
     private Runnable searchTimeoutRunnable = new Runnable() {
         @Override
         public void run() {
@@ -91,15 +89,25 @@ public class aidHelp extends AppCompatActivity {
         btnapn = findViewById(R.id.apn);
         helpbx.setText(thismydevice);
 
-        rrhome.setOnClickListener(v -> {
-            Intent returnhelp = new Intent(aidHelp.this, MainActivity.class);
-            startActivity(returnhelp);
-        });
+
+          rrhome.setOnClickListener(v -> {
+
+                 /*
+              Intent intent = new Intent(aidHelp.this, MainActivity.class);
+              intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+              startActivity(intent);
+              finish();
+
+                  */
+
+              Intent intent = new Intent(aidHelp.this, MainActivity.class);
+              startActivity(intent);
+              ((Activity) aidHelp.this).finish();
+
+           });
 
         btnapn.setOnClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                stopLockTask();
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) stopLockTask();
             try {
                 Intent apnIntent = new Intent(Intent.ACTION_MAIN);
                 apnIntent.setClassName("com.android.settings", "com.android.settings.ApnSettings");
@@ -111,18 +119,10 @@ public class aidHelp extends AppCompatActivity {
             }
         });
 
-        btnwifi.setOnClickListener(v -> {
-            Intent intent = new Intent(aidHelp.this, WifiControlActivity.class);
-            startActivity(intent);
-        });
-
+        btnwifi.setOnClickListener(v -> startActivity(new Intent(aidHelp.this, WifiControlActivity.class)));
         btndata.setOnClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                stopLockTask();
-            }
-            Intent intent = new Intent(Settings.ACTION_DATA_ROAMING_SETTINGS);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) stopLockTask();
+            startActivity(new Intent(Settings.ACTION_DATA_ROAMING_SETTINGS));
         });
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -140,78 +140,92 @@ public class aidHelp extends AppCompatActivity {
         updateSwitchText();
 
         toggleSwitch.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) -> {
-            // Set searching state
             isSearchingNetwork = true;
             searchStartTime = System.currentTimeMillis();
             statusText.setText("Searching network...");
-
-            // Start timeout handler
             searchHandler.postDelayed(searchTimeoutRunnable, SEARCH_TIMEOUT);
 
             wifiManager.setWifiEnabled(isChecked);
             String msg = isChecked ? "Enabling Wi-Fi..." : "Switching to Mobile Data...";
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 
-            if (isChecked && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                wifiManager.reconnect();
-            }
+            if (isChecked && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) wifiManager.reconnect();
         });
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_READ_PHONE_STATE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            listenForSignalStrength();
-            updateNetworkStatus();
-        }
-    }
-
-    private void listenForSignalStrength() {
-        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        tm.listen(new PhoneStateListener() {
-            @Override
-            public void onSignalStrengthsChanged(SignalStrength signalStrength) {
-                super.onSignalStrengthsChanged(signalStrength);
-                signalStrengthDbm = getSignalStrengthDbm(signalStrength);
-                if (!isSearchingNetwork) {
-                    updateNetworkStatus();
+    private boolean hasInternetAccess() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (cm != null) {
+                Network activeNetwork = cm.getActiveNetwork();
+                if (activeNetwork != null) {
+                    NetworkCapabilities capabilities = cm.getNetworkCapabilities(activeNetwork);
+                    return capabilities != null && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
                 }
             }
-        }, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        registerReceiver(wifiReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unregisterReceiver(wifiReceiver);
-        searchHandler.removeCallbacksAndMessages(null);
-    }
-
-    private boolean isNetworkConnected() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (cm == null) return false;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
-            return capabilities != null &&
-                    (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR));
         } else {
-            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-            return activeNetwork != null && activeNetwork.isConnected();
+            if (cm != null) {
+                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                return activeNetwork != null && activeNetwork.isConnected();
+            }
         }
+        return false;
+    }
+
+    private String getCurrentNetworkStatus() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        boolean internet = hasInternetAccess();
+        String internetNote = internet ? " [Internet OK]" : " [No Internet]";
+
+        if (cm != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                if (capabilities != null) {
+                    if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                        String ssid = wifiInfo != null ? wifiInfo.getSSID() : "Unknown SSID";
+                        int rssi = wifiInfo.getRssi();
+                        String bars = getSignalBars(rssi, true);
+                        return "Currently using: Wi-Fi (" + ssid + ", Signal: " + rssi + " dBm " + bars + ")" + internetNote;
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                        String carrierName = getCarrierName(tm);
+                        String networkType = getNetworkType(tm);
+                        String bars = getSignalBars(signalStrengthDbm, false);
+                        return "Currently using: Mobile Data (" + carrierName + ", " + networkType + ", Signal: " + signalStrengthDbm + " dBm " + bars + ")" + internetNote;
+                    } else {
+                        return "No active network" + internetNote;
+                    }
+                }
+            } else {
+                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                if (activeNetwork != null && activeNetwork.isConnected()) {
+                    if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
+                        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                        String ssid = wifiInfo != null ? wifiInfo.getSSID() : "Unknown SSID";
+                        int rssi = wifiInfo.getRssi();
+                        String bars = getSignalBars(rssi, true);
+                        return "Currently using: Wi-Fi (" + ssid + ", Signal: " + rssi + " dBm " + bars + ")" + internetNote;
+                    } else if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
+                        String carrierName = getCarrierName(tm);
+                        String networkType = getNetworkType(tm);
+                        String bars = getSignalBars(signalStrengthDbm, false);
+                        return "Currently using: Mobile Data (" + carrierName + ", " + networkType + ", Signal: " + signalStrengthDbm + " dBm " + bars + ")" + internetNote;
+                    } else {
+                        return "Connected to: Other Network" + internetNote;
+                    }
+                }
+            }
+        }
+        return "No active network" + internetNote;
+    }
+
+    private void updateNetworkStatus() {
+        if (!isSearchingNetwork) statusText.setText(getCurrentNetworkStatus());
     }
 
     private void updateSwitchText() {
-        if (isSearchingNetwork) return; // Don't update switch text while searching
-
+        if (isSearchingNetwork) return;
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -224,11 +238,7 @@ public class aidHelp extends AppCompatActivity {
             } else {
                 NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
                 if (activeNetwork != null && activeNetwork.isConnected()) {
-                    if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
-                        toggleSwitch.setText("Switch to Mobile Data");
-                    } else {
-                        toggleSwitch.setText("Switch to Wi-Fi");
-                    }
+                    toggleSwitch.setText(activeNetwork.getType() == ConnectivityManager.TYPE_WIFI ? "Switch to Mobile Data" : "Switch to Wi-Fi");
                 } else {
                     toggleSwitch.setText("Switch to Wi-Fi");
                 }
@@ -236,9 +246,27 @@ public class aidHelp extends AppCompatActivity {
         }
     }
 
-    private void updateNetworkStatus() {
-        if (isSearchingNetwork) return; // Don't update status while searching
-        statusText.setText(getCurrentNetworkStatus());
+    private boolean isNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            return capabilities != null && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR));
+        } else {
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            return activeNetwork != null && activeNetwork.isConnected();
+        }
+    }
+
+    private void listenForSignalStrength() {
+        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        tm.listen(new PhoneStateListener() {
+            @Override
+            public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+                signalStrengthDbm = getSignalStrengthDbm(signalStrength);
+                if (!isSearchingNetwork) updateNetworkStatus();
+            }
+        }, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
     }
 
     private String getSignalBars(int dBm, boolean isWifi) {
@@ -257,71 +285,12 @@ public class aidHelp extends AppCompatActivity {
         }
     }
 
-    private String getCurrentNetworkStatus() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-
-        if (cm != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
-                if (capabilities != null) {
-                    if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-                        String ssid = wifiInfo != null ? wifiInfo.getSSID() : "Unknown SSID";
-                        int rssi = wifiInfo.getRssi();
-                        String bars = getSignalBars(rssi, true);
-                        return "Currently using: Wi-Fi (" + ssid + ", Signal: " + rssi + " dBm " + bars + ")";
-                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                        String carrierName = getCarrierName(tm);
-                        String networkType = getNetworkType(tm);
-                        String bars = getSignalBars(signalStrengthDbm, false);
-                        return "Currently using: Mobile Data (" + carrierName + ", " + networkType + ", Signal: " + signalStrengthDbm + " dBm " + bars + ")";
-                    } else {
-                        return "No active network";
-                    }
-                } else {
-                    return "No active network";
-                }
-            } else {
-                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-                if (activeNetwork != null && activeNetwork.isConnected()) {
-                    if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
-                        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-                        String ssid = wifiInfo != null ? wifiInfo.getSSID() : "Unknown SSID";
-                        int rssi = wifiInfo.getRssi();
-                        String bars = getSignalBars(rssi, true);
-                        return "Currently using: Wi-Fi (" + ssid + ", Signal: " + rssi + " dBm " + bars + ")";
-                    } else if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE) {
-                        String carrierName = getCarrierName(tm);
-                        String networkType = getNetworkType(tm);
-                        String bars = getSignalBars(signalStrengthDbm, false);
-                        return "Currently using: Mobile Data (" + carrierName + ", " + networkType + ", Signal: " + signalStrengthDbm + " dBm " + bars + ")";
-                    } else {
-                        return "Connected to: Other Network";
-                    }
-                } else {
-                    return "No active network";
-                }
-            }
-        }
-        return "No active network";
-    }
-
     private String getCarrierName(TelephonyManager tm) {
-        if (tm == null) {
-            return "Unknown Carrier";
-        }
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
-                != PackageManager.PERMISSION_GRANTED) {
-            return "Carrier Info Unavailable";
-        }
-
+        if (tm == null) return "Unknown Carrier";
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return "Carrier Info Unavailable";
         try {
             String carrierName = tm.getSimOperatorName();
             return (carrierName != null && !carrierName.isEmpty()) ? carrierName : "Unknown Carrier";
-        } catch (SecurityException e) {
-            return "Carrier Info Unavailable";
         } catch (Exception e) {
             return "Unknown Carrier";
         }
@@ -329,46 +298,56 @@ public class aidHelp extends AppCompatActivity {
 
     private String getNetworkType(TelephonyManager tm) {
         if (tm == null) return "Unknown";
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
-                != PackageManager.PERMISSION_GRANTED) {
-            return "Unknown";
-        }
-
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return "Unknown";
         try {
             switch (tm.getNetworkType()) {
-                case TelephonyManager.NETWORK_TYPE_LTE:
-                    return "4G";
+                case TelephonyManager.NETWORK_TYPE_LTE: return "4G";
                 case TelephonyManager.NETWORK_TYPE_UMTS:
                 case TelephonyManager.NETWORK_TYPE_HSPA:
-                case TelephonyManager.NETWORK_TYPE_HSPAP:
-                    return "3G";
+                case TelephonyManager.NETWORK_TYPE_HSPAP: return "3G";
                 case TelephonyManager.NETWORK_TYPE_EDGE:
-                case TelephonyManager.NETWORK_TYPE_GPRS:
-                    return "2G";
-                case TelephonyManager.NETWORK_TYPE_NR:
-                    return "5G";
-                default:
-                    return "Unknown";
+                case TelephonyManager.NETWORK_TYPE_GPRS: return "2G";
+                case TelephonyManager.NETWORK_TYPE_NR: return "5G";
+                default: return "Unknown";
             }
-        } catch (SecurityException e) {
+        } catch (Exception e) {
             return "Unknown";
         }
     }
 
     private int getSignalStrengthDbm(SignalStrength signalStrength) {
         if (signalStrength == null) return -1;
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return signalStrength.getCellSignalStrengths().isEmpty() ? -1 :
-                    signalStrength.getCellSignalStrengths().get(0).getDbm();
+            return signalStrength.getCellSignalStrengths().isEmpty() ? -1 : signalStrength.getCellSignalStrengths().get(0).getDbm();
         } else {
             try {
                 java.lang.reflect.Method method = SignalStrength.class.getMethod("getDbm");
-                Object result = method.invoke(signalStrength);
-                return (int) result;
+                return (int) method.invoke(signalStrength);
             } catch (Exception e) {
                 return -1;
             }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(wifiReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(wifiReceiver);
+        searchHandler.removeCallbacksAndMessages(null);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_READ_PHONE_STATE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            listenForSignalStrength();
+            updateNetworkStatus();
         }
     }
 }

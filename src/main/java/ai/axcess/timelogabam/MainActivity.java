@@ -16,26 +16,31 @@ import okhttp3.Response;
 
 import android.Manifest;
 import android.app.admin.DevicePolicyManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.StrictMode;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,6 +53,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -58,28 +64,26 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_STORAGE_REQUEST_CODE = 101;
     private static final int ALL_PERMISSIONS = 102;
 
-    // UI Components
     private ImageView facelog, nfcread, away, wrenhr, pinpad, adminlevel;
-    private TextView textView, locationplace, justwait;
+    private TextView textView, locationplace, justwait, connstate;
     private View thisview;
 
-    // Core variables
     private String deviceId;
     private Handler mainHandler;
     private WifiManager wifiManager;
     private String locationnow;
     private String thelocation;
     private String returndevice;
-
-    // Network and threading
+    String responseBody;
+    String responseLocation;
     private ExecutorService backgroundExecutor;
     private OkHttpClient httpClient;
     private volatile boolean isDestroyed = false;
 
-    // Cache for quick access
     private Boolean isOnlineCache = null;
     private long lastOnlineCheck = 0;
-    private static final long ONLINE_CHECK_CACHE_DURATION = 5000; // 5 seconds
+    private static final long ONLINE_CHECK_CACHE_DURATION = 5000;
+    private TextView batterylife;
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -87,30 +91,114 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize core components first
-        initializeCoreComponents();
+        batterylife = findViewById(R.id.batterylife);  // Link to your TextView
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        // Setup UI immediately (no blocking operations)
+        // Register receiver for battery status
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(batteryReceiver, ifilter);
+
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
+        initializeCoreComponents();
         setupUIComponents();
 
-        // Setup device policy and lock task
         setupDevicePolicy();
-
-        // Check permissions (non-blocking)
         checkAndRequestPermissions();
-
-        // Initialize background operations
         initializeBackgroundOperations();
-
-        // Start all network operations in background
         startBackgroundTasks();
+
+        updateConnectionState();
     }
 
-    private void initializeCoreComponents() {
-        mainHandler = new Handler(Looper.getMainLooper());
-        backgroundExecutor = Executors.newFixedThreadPool(3); // Limit concurrent operations
+    public String getdeviceowner( String deviceid ) {
 
-        // Initialize HTTP client with optimized settings
+        String url = "https://punchclock.ai/getdeviceinfo.php?token="+deviceid;
+
+
+        Log.i("action url",url);
+
+        OkHttpClient client = new OkHttpClient();
+
+
+        // String contentType = fileSource.toURL().openConnection().getContentType();
+
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("deviceid",deviceid )
+                .build();
+        Request request = new Request.Builder()
+
+                .url(url)//your webservice url
+                .post(requestBody)
+                .build();
+        try {
+            //String responseBody;
+            okhttp3.Response response = client.newCall(request).execute();
+            // Response response = client.newCall(request).execute();
+            if (response.isSuccessful()){
+                Log.i("SUCC",""+response.message());
+
+            }
+            String resp = response.message();
+            responseBody =  response.body().string();
+            Log.i("respBody:main",responseBody);
+
+
+
+            Log.i("MSG",resp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return responseBody;
+
+    }//emd
+
+
+
+
+    public void FullScreencall() {
+        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) {
+            View v = this.getWindow().getDecorView();
+            v.setSystemUiVisibility(View.GONE);
+        } else if (Build.VERSION.SDK_INT >= 19) {
+            View decorView = getWindow().getDecorView();
+            int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+    }
+
+    private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+
+            int batteryPct = (int) ((level / (float) scale) * 100);
+
+            boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL;
+
+            if (isCharging) {
+                batterylife.setText("Charging: " + batteryPct + "%");
+            } else {
+                batterylife.setText("Battery: " + batteryPct + "%");
+            }
+        }
+    };
+
+
+
+    private void initializeCoreComponents() {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        FullScreencall();
+
+        mainHandler = new Handler(Looper.getMainLooper());
+        backgroundExecutor = Executors.newFixedThreadPool(3);
         httpClient = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
@@ -120,12 +208,10 @@ public class MainActivity extends AppCompatActivity {
 
         deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     }
 
     private void setupUIComponents() {
-        // Initialize all UI components
         justwait = findViewById(R.id.wait);
         thisview = findViewById(R.id.barup);
         adminlevel = findViewById(R.id.gear);
@@ -136,12 +222,11 @@ public class MainActivity extends AppCompatActivity {
         nfcread = findViewById(R.id.nfcfob);
         textView = findViewById(R.id.setinternet);
         locationplace = findViewById(R.id.location);
+        connstate = findViewById(R.id.connstate);
 
-        // Set initial UI state
         locationplace.setText("Loading location...");
         textView.setText("Checking connection...");
 
-        // Setup click listeners immediately (they'll handle their own connectivity checks)
         setupClickListeners();
     }
 
@@ -154,9 +239,46 @@ public class MainActivity extends AppCompatActivity {
         wrenhr.setOnClickListener(v -> {
             justwait.setVisibility(View.VISIBLE);
             startActivity(new Intent(MainActivity.this, aidHelp.class));
+            justwait.setVisibility(View.INVISIBLE);
         });
 
-        facelog.setOnClickListener(v -> new OptimizedCamTask().executeOnExecutor(backgroundExecutor));
+     //  facelog.setOnClickListener(v -> new OptimizedCamTask().executeOnExecutor(backgroundExecutor));
+
+/*
+        facelog.setOnClickListener(v -> {
+
+            thisview.setVisibility(View.INVISIBLE);
+            justwait.setVisibility(View.VISIBLE);
+
+            String cunq = getdeviceowner(deviceId);
+            Log.i("log owner", cunq);
+
+            Intent intent = new Intent(MainActivity.this, SurfaceCamera.class);
+            intent.putExtra("cunq", cunq);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivity(intent);
+            overridePendingTransition(0, 0);
+        });
+*/
+
+        facelog.setOnClickListener(v -> {
+            justwait.setVisibility(View.VISIBLE);
+            backgroundExecutor.execute(() -> {
+                if (isOnlineFast()) {
+                    String cunq = readFile();
+                    mainHandler.post(() -> {
+                        Intent intent = new Intent(MainActivity.this, SurfaceCamera.class);
+                        intent.putExtra("cunq", cunq);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                        startActivity(intent);
+                        overridePendingTransition(0, 0);
+                    });
+                } else {
+                    showNoInternetError();
+                }
+            });
+        });
+
 
         away.setOnClickListener(v -> {
             justwait.setVisibility(View.VISIBLE);
@@ -219,10 +341,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeBackgroundOperations() {
-        // Create base file if needed
         backgroundExecutor.execute(this::createfile);
-
-        // Setup WiFi hotspot protection
         backgroundExecutor.execute(() -> {
             try {
                 WifiConfiguration wifiConfig = new WifiConfiguration();
@@ -232,7 +351,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Show write permission settings if needed
         backgroundExecutor.execute(() -> {
             try {
                 showWritePermissionSettings();
@@ -243,7 +361,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startBackgroundTasks() {
-        // Quick connectivity check first
         backgroundExecutor.execute(() -> {
             boolean connected = isConnectedQuick();
 
@@ -254,13 +371,11 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(new Intent(MainActivity.this, Nointernet.class));
                 } else {
                     textView.setText("Connected");
-                    // Start service only if connected
                     startService(new Intent(MainActivity.this, Myservice.class));
                 }
             });
 
             if (connected) {
-                // Start other background tasks in parallel
                 backgroundExecutor.execute(this::checkDeviceRegistration);
                 backgroundExecutor.execute(this::loadDeviceLocation);
             }
@@ -279,20 +394,14 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isOnlineFast() {
         long currentTime = System.currentTimeMillis();
-
-        // Use cached result if recent
         if (isOnlineCache != null && (currentTime - lastOnlineCheck) < ONLINE_CHECK_CACHE_DURATION) {
             return isOnlineCache;
         }
-
-        // Quick connectivity check first
         if (!isConnectedQuick()) {
             isOnlineCache = false;
             lastOnlineCheck = currentTime;
             return false;
         }
-
-        // Ping test (but with timeout)
         try {
             Process process = Runtime.getRuntime().exec("/system/bin/ping -c 1 -W 2 8.8.8.8");
             boolean result = process.waitFor() == 0;
@@ -308,11 +417,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkDeviceRegistration() {
         if (isDestroyed) return;
-
         try {
             String url = "https://punchclock.ai/devicesetup.php?action=checkdevice&token=" + deviceId;
             Request request = new Request.Builder().url(url).build();
-
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
@@ -322,10 +429,8 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     if (isDestroyed) return;
-
                     String result = response.body().string();
                     Log.i("DeviceCheck", result);
-
                     mainHandler.post(() -> {
                         if (!isDestroyed && result.trim().equals("not found")) {
                             startActivity(new Intent(MainActivity.this, Startup.class));
@@ -340,11 +445,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadDeviceLocation() {
         if (isDestroyed) return;
-
         try {
             String url = "https://punchclock.ai/getdevicelocation.php?token=" + deviceId;
             Request request = new Request.Builder().url(url).build();
-
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
@@ -359,10 +462,8 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     if (isDestroyed) return;
-
                     String location = response.body().string();
                     Log.i("DeviceLocation", location);
-
                     mainHandler.post(() -> {
                         if (!isDestroyed) {
                             thelocation = location;
@@ -388,29 +489,24 @@ public class MainActivity extends AppCompatActivity {
     public String readFile() {
         String fileName = "base.txt";
         StringBuilder stringBuilder = new StringBuilder();
-
         try (FileInputStream fis = openFileInput(fileName);
              InputStreamReader isr = new InputStreamReader(fis);
              BufferedReader br = new BufferedReader(isr)) {
-
             String line;
             while ((line = br.readLine()) != null) {
                 stringBuilder.append(line);
             }
             locationnow = stringBuilder.toString();
-
         } catch (IOException e) {
             Log.e("MainActivity", "Error reading file", e);
             locationnow = "";
         }
-
         return locationnow;
     }
 
     public void createfile() {
         String fileName = "base.txt";
         String content = "";
-
         File file = new File(getFilesDir(), fileName);
         if (!file.exists()) {
             try (FileOutputStream fos = openFileOutput(fileName, Context.MODE_PRIVATE)) {
@@ -430,27 +526,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return true;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == MY_CAMERA_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
-            }
-        }
-
-        if (requestCode == MY_STORAGE_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Storage permission granted", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 
     private boolean showWritePermissionSettings() {
@@ -474,7 +549,6 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "ILLEGAL ACTION DETECTED! Hotspot NOT available", Toast.LENGTH_LONG).show();
                 backgroundExecutor.execute(this::sendhotspot);
             }
-
             Method method = wifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
             return (Boolean) method.invoke(wifiManager, wifiConfig, enabled);
         } catch (Exception e) {
@@ -487,20 +561,16 @@ public class MainActivity extends AppCompatActivity {
         try {
             Long tsLong = System.currentTimeMillis() / 1000;
             String url = "https://punchclock.ai/api/hotspot.php?timestamp=" + tsLong + "&deviceid=" + deviceId;
-
             RequestBody requestBody = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("device", deviceId)
                     .build();
-
             Request request = new Request.Builder().url(url).post(requestBody).build();
-
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     Log.e("MainActivity", "Hotspot report failed", e);
                 }
-
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     Log.i("MainActivity", "Hotspot reported: " + response.body().string());
@@ -512,14 +582,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onBackPressed() {
-        // Disabled for kiosk mode
-    }
+    public void onBackPressed() {}
 
     @Override
     protected void onDestroy() {
-        isDestroyed = true;
 
+
+        isDestroyed = true;
         if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
             backgroundExecutor.shutdown();
             try {
@@ -530,21 +599,18 @@ public class MainActivity extends AppCompatActivity {
                 backgroundExecutor.shutdownNow();
             }
         }
-
         super.onDestroy();
+        unregisterReceiver(batteryReceiver);
     }
 
-    // Optimized AsyncTask classes
     private class OptimizedPinpadTask extends AsyncTask<Void, Void, Boolean> {
         @Override
         protected Boolean doInBackground(Void... voids) {
             return isOnlineFast();
         }
-
         @Override
         protected void onPostExecute(Boolean online) {
             if (isDestroyed) return;
-
             if (online) {
                 String cunq = readFile();
                 justwait.setVisibility(View.VISIBLE);
@@ -557,16 +623,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class OptimizedCamTask extends AsyncTask<Void, Void, Boolean> {
+
+        private class OptimizedCamTask extends AsyncTask<Void, Void, Boolean> {
         @Override
         protected Boolean doInBackground(Void... voids) {
             return isOnlineFast();
         }
-
         @Override
         protected void onPostExecute(Boolean online) {
             if (isDestroyed) return;
-
             if (online) {
                 String cunq = readFile();
                 justwait.setVisibility(View.VISIBLE);
@@ -575,9 +640,51 @@ public class MainActivity extends AppCompatActivity {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                 startActivity(intent);
                 overridePendingTransition(0, 0);
+                justwait.setVisibility(View.INVISIBLE);
             } else {
                 showNoInternetError();
             }
         }
+
     }
+
+    private void updateConnectionState() {
+        mainHandler.post(() -> {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+
+            String connectionType = "Unknown";
+            boolean isConnected = false;
+
+            if (activeNetwork != null && activeNetwork.isConnected()) {
+                isConnected = true;
+                switch (activeNetwork.getType()) {
+                    case ConnectivityManager.TYPE_WIFI:
+                        connectionType = "Wi-Fi";
+                        break;
+                    case ConnectivityManager.TYPE_MOBILE:
+                        connectionType = "Mobile Data";
+                        break;
+                    default:
+                        connectionType = "Other";
+                        break;
+                }
+            } else {
+                connectionType = "No Connection";
+            }
+
+            String status = (isConnected ? "Connected via " : "Not connected. Last seen on ") + connectionType;
+            connstate.setText(status);
+
+            Drawable icon = getResources().getDrawable(android.R.color.holo_red_light);
+            icon.setBounds(0, 0, 40, 40);
+            int color = isConnected ? getResources().getColor(android.R.color.holo_green_dark) : getResources().getColor(android.R.color.holo_red_dark);
+            icon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+
+            connstate.setCompoundDrawables(icon, null, null, null);
+        });
+    }
+
+
+
 }

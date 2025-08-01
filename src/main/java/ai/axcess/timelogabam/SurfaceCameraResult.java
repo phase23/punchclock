@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 //import android.support.v7.app.AppCompatActivity;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -67,6 +68,7 @@ public class SurfaceCameraResult extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_surface_camera_result);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        FullScreencall();
 
         textView = (TextView)findViewById(R.id.textView);
         statresult = (TextView)findViewById(R.id.statusresult);
@@ -215,6 +217,12 @@ public class SurfaceCameraResult extends AppCompatActivity {
 
                 startActivity(intent);
                 ((Activity) SurfaceCameraResult.this).finish();
+
+               /* Intent intent = new Intent(SurfaceCameraResult.this, MainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();*/
+
                 handler.removeCallbacksAndMessages(null);
             }
         });
@@ -281,6 +289,17 @@ public class SurfaceCameraResult extends AppCompatActivity {
 
 
 
+    }
+
+    public void FullScreencall() {
+        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) {
+            View v = this.getWindow().getDecorView();
+            v.setSystemUiVisibility(View.GONE);
+        } else if (Build.VERSION.SDK_INT >= 19) {
+            View decorView = getWindow().getDecorView();
+            int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
     }
 
 
